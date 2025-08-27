@@ -1,0 +1,11 @@
+{
+    "asset": "64e32e4bdd6e14f4cbf4b7e5421f25f6",
+    "fileName": "0198e70a-d8bf-71a7-881c-d002418fd415_Preview.png",
+    "prompt": "rocky mountain side",
+    "negativePrompt": "",
+    "model": "575ecf67-4425-4939-97b9-5e138b8ee234",
+    "modelName": "Unity Texture2D",
+    "customSeed": 378564152,
+    "w3CTraceId": "088196fce36fd27b3aa3c32b44577d79",
+    "refinementMode": "Generation"
+}

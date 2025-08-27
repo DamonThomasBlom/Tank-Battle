@@ -1,0 +1,11 @@
+{
+    "asset": "2d14b80b91c4a4e4d98bb8fe7b16d86d",
+    "fileName": "0198e70c-3207-78cd-b4e5-3641f5484ef9_Preview.png",
+    "prompt": "bumpy war terrain suitable for tank battles",
+    "negativePrompt": "",
+    "model": "575ecf67-4425-4939-97b9-5e138b8ee234",
+    "modelName": "Unity Texture2D",
+    "customSeed": 1481851881,
+    "w3CTraceId": "d404eb54bf2ba7757b5fa546b187c3ff",
+    "refinementMode": "Generation"
+}

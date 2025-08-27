@@ -1,0 +1,20 @@
+{
+    "asset": "72a3b297366c07f478ab606f5cfc51dc",
+    "fileName": "0198e74e-9398-7891-882e-e05d84f90f35.png",
+    "prompt": "Rocky",
+    "negativePrompt": "",
+    "model": "de7dd170-a573-4d45-9da2-89b1ff778408",
+    "modelName": "3D Cartoon Characters",
+    "customSeed": -1,
+    "w3CTraceId": "6bc9342a25f120069de1a4a2d9a9ea08",
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0
+}
