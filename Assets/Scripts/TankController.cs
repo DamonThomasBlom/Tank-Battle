@@ -9,6 +9,7 @@ public class TankController : MonoBehaviour
     public float reverseForce = 9000f;         // reverse thrust
     public float turnTorque = 6000f;           // yaw torque
     public float maxSpeed = 14f;               // m/s
+    public float maxTurnSpeed = 14f;               // m/s
     public float traction = 6f;                // lateral friction to kill side slip
     public float downforce = 40f;              // pushes tank to ground for grip
     public float brakeStrength = 18000f;       // when no input, resist rolling
@@ -28,9 +29,6 @@ public class TankController : MonoBehaviour
     public float lookDistance = 20f;      // how far ahead of the camera to aim
     public float turretTurnSpeed = 120f;       // deg/sec
     public float barrelTurnSpeed = 80f;        // deg/sec
-    public float minPitch = -5f;
-    public float maxPitch = 25f;
-    public float aimRayLength = 2000f;
 
     [Header("=== Shooting ===")]
     public GameObject shellPrefab;             // must have Rigidbody + Collider
@@ -69,6 +67,8 @@ public class TankController : MonoBehaviour
 
     void Awake()
     {
+        Cursor.lockState = CursorLockMode.Locked;
+
         rb = GetComponent<Rigidbody>();
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         if (!cam && Camera.main) cam = Camera.main;
@@ -105,6 +105,7 @@ public class TankController : MonoBehaviour
         ApplyGroundForces();
         HandleMovementPhysics();
         LimitMaxSpeed();
+        LimitMaxTurnSpeed();
         ApplyDownforce();
         KillLateralSlip();
     }
@@ -160,21 +161,6 @@ public class TankController : MonoBehaviour
     }
 
     // === AIMING ===
-
-    Vector3 GetCrosshairWorldPoint(out bool hitSomething)
-    {
-        hitSomething = false;
-        if (!cam) return transform.position + transform.forward * 100f;
-
-        Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f));
-        if (Physics.Raycast(ray, out RaycastHit hit, aimRayLength, ~0, QueryTriggerInteraction.Ignore))
-        {
-            hitSomething = true;
-            return hit.point;
-        }
-        return ray.GetPoint(aimRayLength);
-    }
-
     void AimTurretAndBarrel()
     {
         if (!turret || !barrel || !cam) return;
@@ -344,6 +330,19 @@ public class TankController : MonoBehaviour
         {
             Vector3 capped = new Vector3(v.x, 0f, v.z).normalized * maxSpeed;
             rb.linearVelocity = new Vector3(capped.x, v.y, capped.z);
+        }
+    }
+
+    void LimitMaxTurnSpeed()
+    {
+        //if (!IsGrounded(out Vector3 val)) return;
+
+        Vector3 angVel = rb.angularVelocity; // radians/sec
+        float currentTurnSpeed = angVel.magnitude;
+
+        if (currentTurnSpeed > maxTurnSpeed)
+        {
+            rb.angularVelocity = angVel.normalized * maxTurnSpeed;
         }
     }
 

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 3609118582106207539}
   - component: {fileID: 803942983562659067}
   - component: {fileID: 5885979754168192589}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: TankBullet
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -150,7 +150,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2469139469373702355}
   - component: {fileID: 1376188933764592584}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Trail
   m_TagString: Untagged
   m_Icon: {fileID: 0}
