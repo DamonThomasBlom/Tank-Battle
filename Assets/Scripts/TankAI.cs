@@ -10,10 +10,13 @@ public class TankAI : MonoBehaviour
     public Transform firePoint;
     public float gravityScale = 0.1f;
     public float muzzleVelocity = 20f;
+    public float predictionMultiplier = 1f;
 
     [SerializeField] float elevationFactor = 0.01f; // tweak in Inspector
     public float turretTurnSpeed = 2f;
     public float fireCooldown = 2f;
+    [Range(0, 1)]
+    public float accuracy = 0.9f; // 1 = perfect, 0 = random mess
     private float fireTimer;
     private NavMeshAgent agent;
 
@@ -41,22 +44,48 @@ public class TankAI : MonoBehaviour
     {
         if (target == null) return;
 
-        // Base direction to target
-        Vector3 toTarget = target.position - turret.position;
+        // Estimate target velocity (if it has a Rigidbody)
+        Vector3 targetVel = Vector3.zero;
+        if (target.TryGetComponent<Rigidbody>(out var trb))
+            targetVel = trb.linearVelocity;
 
-        // Flat distance on XZ
+        // Predict position
+        Vector3 toTarget = target.position - firePoint.position;
+        float timeToTarget = (toTarget.magnitude / muzzleVelocity) * predictionMultiplier;
+        Vector3 predictedPos = target.position + targetVel * timeToTarget;
+
+        // Add inaccuracy
+        Vector3 randomOffset = Random.insideUnitSphere * (1f - accuracy) * 10f;
+        predictedPos += randomOffset;
+
+        // Add height to compensate for bullet drop
         float distance = new Vector2(toTarget.x, toTarget.z).magnitude;
+        Vector3 heightOffset = new Vector3(0, (distance * distance) * elevationFactor, 0);
+        predictedPos += heightOffset;
 
-        // Add an upward offset based on distance
-        Vector3 elevatedDir = (toTarget + Vector3.up * (distance * elevationFactor)).normalized;
+        // Aim
+        Vector3 dir = (predictedPos - turret.position).normalized;
+        Quaternion lookRotation = Quaternion.LookRotation(dir);
+        turret.rotation = Quaternion.Slerp(turret.rotation, lookRotation, Time.deltaTime * turretTurnSpeed);
 
-        // Smoothly rotate the turret to look in that direction
-        Quaternion desiredRot = Quaternion.LookRotation(elevatedDir, Vector3.up);
-        turret.rotation = Quaternion.Slerp(
-            turret.rotation,
-            desiredRot,
-            Time.deltaTime * turretTurnSpeed
-        );
+        //if (target == null) return;
+
+        //// Base direction to target
+        //Vector3 toTarget = target.position - turret.position;
+
+        //// Flat distance on XZ
+        //float distance = new Vector2(toTarget.x, toTarget.z).magnitude;
+
+        //// Add an upward offset based on distance
+        //Vector3 elevatedDir = (toTarget + Vector3.up * (distance * elevationFactor)).normalized;
+
+        //// Smoothly rotate the turret to look in that direction
+        //Quaternion desiredRot = Quaternion.LookRotation(elevatedDir, Vector3.up);
+        //turret.rotation = Quaternion.Slerp(
+        //    turret.rotation,
+        //    desiredRot,
+        //    Time.deltaTime * turretTurnSpeed
+        //);
     }
 
     void TryFire()
@@ -67,7 +96,7 @@ public class TankAI : MonoBehaviour
         Vector3 dirToTarget = (target.position - firePoint.position).normalized;
         float dot = Vector3.Dot(turret.forward, dirToTarget);
 
-        if (dot > 0.95f)
+        if (dot > 0.75f)
         {
             // Fire straight forward from the fire point
             Quaternion shotRot = firePoint.rotation;

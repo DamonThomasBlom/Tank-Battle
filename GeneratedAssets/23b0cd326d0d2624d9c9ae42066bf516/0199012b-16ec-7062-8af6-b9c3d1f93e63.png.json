@@ -1,0 +1,20 @@
+{
+    "asset": "23b0cd326d0d2624d9c9ae42066bf516",
+    "fileName": "0199012b-16ec-7062-8af6-b9c3d1f93e63.png",
+    "prompt": "Low poly grass for terrain",
+    "negativePrompt": "",
+    "model": "5fa78152-02ea-492b-b8ea-777b31a8a2f8",
+    "modelName": "GPT Image 1 - Low",
+    "customSeed": -1,
+    "w3CTraceId": "4f3670b3511a826042868576e17085a9",
+    "refinementMode": "Generation",
+    "pixelateTargetSize": 0,
+    "pixelateKeepImageSize": false,
+    "pixelatePixelBlockSize": 0,
+    "pixelateMode": 0,
+    "pixelateOutlineThickness": 0,
+    "doodles": {
+        "m_Items": []
+    },
+    "upscaleFactor": 0
+}
