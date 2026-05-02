@@ -307,6 +307,8 @@ public class TankController : MonoBehaviour
             Vector3 gravityOnSlope = Vector3.Project(rb.mass * Physics.gravity, Vector3.Cross(Vector3.Cross(groundNormal, Vector3.down), groundNormal));
             engine += -gravityOnSlope * slopeAssist;
         }
+        else
+            return;
 
         rb.AddForce(engine * Time.fixedDeltaTime);
 
@@ -335,7 +337,7 @@ public class TankController : MonoBehaviour
 
     void LimitMaxTurnSpeed()
     {
-        //if (!IsGrounded(out Vector3 val)) return;
+        if (!IsGrounded(out Vector3 val)) return;
 
         Vector3 angVel = rb.angularVelocity; // radians/sec
         float currentTurnSpeed = angVel.magnitude;
