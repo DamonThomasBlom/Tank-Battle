@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class TankBullet : MonoBehaviour
 {
@@ -6,12 +6,17 @@ public class TankBullet : MonoBehaviour
     public GameObject ParticleEffect;   // Prefab with particles + optional shockwave
     public Transform bulletGraphic;  // assign your bullet mesh here in Inspector
 
+    [Header("Damage")]
+    public float damage = 25f;
+    public int ownerTeam;
+
     [Header("Settings")]
     public float destroyDelay = 0.05f;
     public float explosionCameraShakeRadius = 10f;
     public float maxShakeIntensity = 1f;
 
     private Rigidbody rb;
+    private Collider ownerCollider;
 
     void Awake()
     {
@@ -29,6 +34,10 @@ public class TankBullet : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (other == ownerCollider) return;
+
+        Explode();
+
         // Spawn particle effect
         if (ParticleEffect != null)
         {
@@ -38,7 +47,6 @@ public class TankBullet : MonoBehaviour
                 Quaternion.identity
             );
 
-            // Destroy effect after its max particle lifetime
             ParticleSystem ps = effect.GetComponentInChildren<ParticleSystem>();
             if (ps != null)
             {
@@ -46,11 +54,11 @@ public class TankBullet : MonoBehaviour
             }
             else
             {
-                Destroy(effect, 3f); // fallback
+                Destroy(effect, 3f);
             }
         }
 
-        // Shake camera
+        // Camera shake
         if (CameraShake.instance != null)
         {
             float dist = Vector3.Distance(transform.position, CameraShake.instance.transform.position);
@@ -61,7 +69,40 @@ public class TankBullet : MonoBehaviour
             }
         }
 
-        // Destroy bullet
         Destroy(gameObject, destroyDelay);
+    }
+
+    private void Explode()
+    {
+        float radius = explosionCameraShakeRadius;
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, radius);
+
+        foreach (var hit in hits)
+        {
+            Health health = hit.GetComponentInParent<Health>();
+            if (health == null) continue;
+
+            Team targetTeam = hit.GetComponentInParent<Team>();
+
+            // 🚫 Friendly fire check
+            if (targetTeam != null && targetTeam.teamId == ownerTeam)
+                continue;
+
+            // 📏 Distance-based damage falloff
+            float distance = Vector3.Distance(transform.position, hit.transform.position);
+
+            float damagePercent = 1f - (distance / radius);
+            damagePercent = Mathf.Clamp01(damagePercent);
+
+            float finalDamage = damage * damagePercent;
+
+            health.TakeDamage(finalDamage, ownerTeam);
+        }
+    }
+
+    public void SetOwner(GameObject owner)
+    {
+        ownerCollider = owner.GetComponent<Collider>();
     }
 }

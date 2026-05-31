@@ -65,8 +65,11 @@ public class TankController : MonoBehaviour
     Vector3 desiredCamPos;
     float barrelInitialLocalPitch = 0f;
 
+    Team myTeam;
+
     void Awake()
     {
+        myTeam = GetComponentInParent<Team>();
         Cursor.lockState = CursorLockMode.Locked;
 
         rb = GetComponent<Rigidbody>();
@@ -108,6 +111,12 @@ public class TankController : MonoBehaviour
         LimitMaxTurnSpeed();
         ApplyDownforce();
         KillLateralSlip();
+    }
+
+    private void OnDisable()
+    {
+        canShoot = true;
+        StopAllCoroutines();
     }
 
     void LateUpdate()
@@ -232,6 +241,13 @@ public class TankController : MonoBehaviour
         Quaternion shotRot = firePoint.rotation;
         GameObject shell = Instantiate(shellPrefab, firePoint.position, shotRot);
 
+        var bullet = shell.GetComponent<TankBullet>();
+        if (bullet != null)
+        {
+            bullet.ownerTeam = myTeam.teamId;
+            bullet.SetOwner(gameObject);
+        }
+
         if (shell.TryGetComponent<Rigidbody>(out var srb))
         {
             srb.linearVelocity = firePoint.forward * muzzleVelocity;
@@ -290,6 +306,10 @@ public class TankController : MonoBehaviour
     {
         float fwdInput = Input.GetAxis(moveAxis);
         float turnInput = Input.GetAxis(turnAxis);
+
+        // Going backwards invert turning
+        if (fwdInput < 0)
+            turnInput *= -1;
 
         Vector3 fwd = transform.forward;
         Vector3 vel = rb.linearVelocity;

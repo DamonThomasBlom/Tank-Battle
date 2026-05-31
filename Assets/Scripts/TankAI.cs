@@ -1,5 +1,16 @@
+﻿using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
+
+public enum TankState
+{
+    Idle,
+    MovingToCapture,
+    Capturing,
+    Attacking,
+    Defending,
+    Patrol
+}
 
 public class TankAI : MonoBehaviour
 {
@@ -38,30 +49,330 @@ public class TankAI : MonoBehaviour
     private float lastOffsetUpdateTime;
     private bool canSeeTarget = true; // Will be used for future LOS implementation
 
+    [SerializeField] private TankState currentState;
+    private CaptureZone targetZone;
+    private Team myTeam;
+
+    float evaluateStateStep = 1f;
+    float elapsedTimeSinceEvaluation = 0;
+
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
+        myTeam = GetComponentInParent<Team>();
+        var health = GetComponentInParent<Health>();
+        if (health != null)
+        {
+            health.OnDie.AddListener(() =>
+            {
+                SetState(TankState.Idle);
+                target = null;
+                if (targetZone)
+                {
+                    targetZone.tanksInZone.Remove(myTeam);
+                }
+                targetZone = null;
+                agent.ResetPath();
+            });
+        }
+
         UpdateRandomOffset(); // Initialize random offset
     }
 
     void Update()
     {
-        if (target == null) return;
+        if (!agent.enabled) return;
 
-        // Move towards player
-        agent.SetDestination(target.position);
-
-        // Update random offset periodically
-        if (Time.time - lastOffsetUpdateTime > inaccuracyUpdateInterval)
+        elapsedTimeSinceEvaluation += Time.deltaTime;
+        if (elapsedTimeSinceEvaluation > evaluateStateStep)
         {
-            UpdateRandomOffset();
+            EvaluateState();
+            elapsedTimeSinceEvaluation = 0;
+        }
+        HandleState();
+    }
+
+    void EvaluateState()
+    {
+        // ALWAYS try get closest enemy FIRST
+        Transform closestEnemy = GetClosestEnemy();
+
+        if (closestEnemy != null)
+        {
+            target = closestEnemy;
+            SetState(TankState.Attacking);
+            return;
         }
 
-        // Aim turret
-        AimTurret();
+        // If we lost enemy
+        target = null;
 
-        // Fire
+        // Capture logic
+        CaptureZone bestZone = FindBestZone();
+
+        if (bestZone != null)
+        {
+            targetZone = bestZone;
+            SetState(TankState.MovingToCapture);
+            return;
+        }
+
+        SetState(TankState.Patrol);
+    }
+
+    void HandleState()
+    {
+        switch (currentState)
+        {
+            case TankState.MovingToCapture:
+                MoveToZone();
+                break;
+
+            case TankState.Capturing:
+                StayInZone();
+                break;
+
+            case TankState.Attacking:
+                AttackTarget();
+                break;
+
+            case TankState.Patrol:
+                Patrol();
+                break;
+
+            case TankState.Idle:
+                Patrol();
+                break;
+        }
+    }
+
+    CaptureZone FindBestZone()
+    {
+        CaptureZone[] zones = FindObjectsByType<CaptureZone>();
+
+        CaptureZone best = null;
+        float bestScore = float.MinValue;
+
+        foreach (var zone in zones)
+        {
+            if (zone.teamOwner == myTeam.teamId)
+                continue; // Skip already owned zones
+
+            float dist = Vector3.Distance(transform.position, zone.centerPoint.position);
+
+            float score = 0;
+
+            // Prefer closer zones
+            score -= dist;
+
+            // Prefer enemy zones
+            if (zone.teamOwner != myTeam.teamId)
+                score += 50f;
+
+            // Avoid overcrowded zones
+            score -= zone.tanksInZone.Count * 10f;
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = zone;
+            }
+        }
+
+        return best;
+    }
+
+    float preferredDistance = 40f;
+
+    void AttackTarget()
+    {
+        if (target == null)
+        {
+            SetState(TankState.Idle);
+            return;
+        }
+
+        float dist = Vector3.Distance(transform.position, target.position);
+
+        if (dist > preferredDistance)
+        {
+            agent.SetDestination(target.position);
+        }
+        else if (dist < preferredDistance * 0.5f)
+        {
+            // Back up if too close
+            Vector3 dir = (transform.position - target.position).normalized;
+            agent.SetDestination(transform.position + dir * 10f);
+        }
+        else
+        {
+            agent.ResetPath();
+        }
+
+        AimTurret();
         TryFire();
+    }
+
+    bool IsEnemyNearby()
+    {
+        float detectionRadius = 60f;
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, detectionRadius);
+
+        foreach (var hit in hits)
+        {
+            Team other = hit.GetComponentInParent<Team>();
+
+            if (other != null && other != this && other.teamId != myTeam.teamId)
+            {
+                bool hasLOS = HasLineOfSight(other.transform);
+
+                if (hasLOS || Vector3.Distance(transform.position, other.transform.position) < 10f)
+                {
+                    target = hit.transform;
+                    return true;
+                }
+            }
+        }
+
+        target = null;
+        return false;
+    }
+
+    Transform GetClosestEnemy()
+    {
+        float detectionRadius = 60f;
+        Collider[] hits = Physics.OverlapSphere(transform.position, detectionRadius);
+
+        Transform bestTarget = null;
+        float closestDist = float.MaxValue;
+
+        foreach (var hit in hits)
+        {
+            Team other = hit.GetComponentInParent<Team>();
+
+            if (other == null || other.teamId == myTeam.teamId)
+                continue;
+
+            var enemyTank = hit.gameObject;
+
+            float dist = Vector3.Distance(transform.position, enemyTank.transform.position);
+
+            bool hasLOS = HasLineOfSight(enemyTank.transform);
+
+            // Allow close enemies even without LOS
+            if (!hasLOS && dist > 15f)
+                continue;
+
+            if (dist < closestDist)
+            {
+                closestDist = dist;
+                bestTarget = enemyTank.transform;
+            }
+        }
+
+        return bestTarget;
+    }
+
+    void MoveToZone()
+    {
+        if (targetZone == null)
+        {
+            SetState(TankState.Idle);
+            return;
+        }
+
+        agent.SetDestination(targetZone.centerPoint.position);
+
+        //float dist = Vector3.Distance(transform.position, targetZone.centerPoint.position);
+
+        if (targetZone.tanksInZone.Contains(this.myTeam))
+        {
+            SetState(TankState.Capturing);
+        }
+
+        if (targetZone.teamOwner == myTeam.teamId)
+        {
+            SetState(TankState.Idle);
+        }
+    }
+
+    void StayInZone()
+    {
+        if (targetZone == null)
+        {
+            SetState(TankState.Idle);
+            return;
+        }
+
+        agent.ResetPath();
+
+        // Optional: face center
+        Vector3 dir = (targetZone.centerPoint.position - transform.position).normalized;
+        if (dir != Vector3.zero)
+        {
+            Quaternion rot = Quaternion.LookRotation(dir);
+            transform.rotation = Quaternion.Slerp(transform.rotation, rot, Time.deltaTime * 2f);
+        }
+
+        // If zone is captured → pick new objective
+        if (targetZone.teamOwner == myTeam.teamId)
+        {
+            SetState(TankState.Idle);
+        }
+    }
+
+    Vector3 patrolPoint;
+    bool hasPatrolPoint;
+
+    void Patrol()
+    {
+        if (!hasPatrolPoint)
+        {
+            Vector3 random = Random.insideUnitSphere * 40f;
+            random.y = 0;
+
+            patrolPoint = transform.position + random;
+
+            if (NavMesh.SamplePosition(patrolPoint, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+            {
+                patrolPoint = hit.position;
+            }
+
+            hasPatrolPoint = true;
+
+            agent.ResetPath(); // 🔥 important
+        }
+
+        agent.SetDestination(patrolPoint);
+
+        float dist = Vector3.Distance(transform.position, patrolPoint);
+
+        if (dist < 3f)
+        {
+            hasPatrolPoint = false;
+        }
+    }
+
+    void SetState(TankState newState)
+    {
+        if (currentState == newState) return;
+        //Debug.Log($"Tank {name} changing state from {currentState} to {newState}");
+
+        currentState = newState;
+        agent.ResetPath(); 
+    }
+
+    bool HasLineOfSight(Transform target)
+    {
+        Vector3 dir = (target.position - firePoint.position).normalized;
+
+        if (Physics.Raycast(firePoint.position, dir, out RaycastHit hit, maxAimDistance))
+        {
+            return hit.transform.root == target.root;
+        }
+
+        return false;
     }
 
     void UpdateRandomOffset()
@@ -145,6 +456,13 @@ public class TankAI : MonoBehaviour
 
         Quaternion shotRot = firePoint.rotation;
         GameObject shell = Instantiate(shellPrefab, firePoint.position, firePoint.rotation);
+
+        var bullet = shell.GetComponent<TankBullet>();
+        if (bullet != null)
+        {
+            bullet.ownerTeam = myTeam.teamId;
+            bullet.SetOwner(gameObject);
+        }
 
         if (shell.TryGetComponent<Rigidbody>(out var srb))
         {
