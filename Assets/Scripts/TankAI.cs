@@ -54,6 +54,7 @@ public class TankAI : MonoBehaviour
     private Team myTeam;
 
     float evaluateStateStep = 1f;
+    float randomEvaluateStep = 0;
     float elapsedTimeSinceEvaluation = 0;
 
     void Start()
@@ -67,9 +68,12 @@ public class TankAI : MonoBehaviour
             {
                 SetState(TankState.Idle);
                 target = null;
-                if (targetZone)
+
+                // Remove self from any capture zones we were in
+                var captureZones = FindObjectsByType<CaptureZone>();
+                foreach (var zone in captureZones)
                 {
-                    targetZone.tanksInZone.Remove(myTeam);
+                    zone.tanksInZone.Remove(myTeam);
                 }
                 targetZone = null;
                 agent.ResetPath();
@@ -84,10 +88,14 @@ public class TankAI : MonoBehaviour
         if (!agent.enabled) return;
 
         elapsedTimeSinceEvaluation += Time.deltaTime;
-        if (elapsedTimeSinceEvaluation > evaluateStateStep)
+        if (elapsedTimeSinceEvaluation > randomEvaluateStep)
         {
             EvaluateState();
             elapsedTimeSinceEvaluation = 0;
+
+            // Add reaction randomness to make AI feel a bit more real
+            float reactionDelay = Random.Range(0.2f, 0.6f);
+            randomEvaluateStep = evaluateStateStep + reactionDelay;
         }
         HandleState();
     }
@@ -184,6 +192,9 @@ public class TankAI : MonoBehaviour
 
     float preferredDistance = 40f;
 
+    float strafeTimer;
+    Vector3 strafeDirection;
+
     void AttackTarget()
     {
         if (target == null)
@@ -194,19 +205,41 @@ public class TankAI : MonoBehaviour
 
         float dist = Vector3.Distance(transform.position, target.position);
 
+        // Update strafe direction occasionally
+        strafeTimer -= Time.deltaTime;
+        if (strafeTimer <= 0f)
+        {
+            Vector3 toTarget = (target.position - transform.position).normalized;
+
+            // Perpendicular = strafe
+            Vector3 perp = Vector3.Cross(toTarget, Vector3.up);
+
+            strafeDirection = (Random.value > 0.5f ? perp : -perp);
+            strafeDirection += Random.insideUnitSphere * 0.3f; // noise
+            strafeDirection.y = 0;
+
+            strafeTimer = Random.Range(3, 6f);
+        }
+
+        Vector3 movePos = transform.position;
+
         if (dist > preferredDistance)
         {
-            agent.SetDestination(target.position);
+            movePos = target.position;
         }
         else if (dist < preferredDistance * 0.5f)
         {
-            // Back up if too close
-            Vector3 dir = (transform.position - target.position).normalized;
-            agent.SetDestination(transform.position + dir * 10f);
+            movePos = transform.position - (target.position - transform.position).normalized * 10f;
         }
         else
         {
-            agent.ResetPath();
+            // 🔥 THIS is the magic → strafe instead of stopping
+            movePos = transform.position + strafeDirection * 2f;
+        }
+
+        if (NavMesh.SamplePosition(movePos, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+        {
+            agent.SetDestination(hit.position);
         }
 
         AimTurret();
@@ -297,6 +330,9 @@ public class TankAI : MonoBehaviour
         }
     }
 
+    Vector3 zoneMovePoint;
+    float zoneMoveTimer;
+
     void StayInZone()
     {
         if (targetZone == null)
@@ -305,17 +341,25 @@ public class TankAI : MonoBehaviour
             return;
         }
 
-        agent.ResetPath();
+        zoneMoveTimer -= Time.deltaTime;
 
-        // Optional: face center
-        Vector3 dir = (targetZone.centerPoint.position - transform.position).normalized;
-        if (dir != Vector3.zero)
+        if (zoneMoveTimer <= 0f)
         {
-            Quaternion rot = Quaternion.LookRotation(dir);
-            transform.rotation = Quaternion.Slerp(transform.rotation, rot, Time.deltaTime * 2f);
+            Vector3 randomOffset = Random.insideUnitSphere * 10f;
+            randomOffset.y = 0;
+
+            Vector3 targetPos = targetZone.centerPoint.position + randomOffset;
+
+            if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+            {
+                zoneMovePoint = hit.position;
+                agent.SetDestination(zoneMovePoint);
+            }
+
+            zoneMoveTimer = Random.Range(2f, 5f); // change position every few seconds
         }
 
-        // If zone is captured → pick new objective
+        // If captured → leave
         if (targetZone.teamOwner == myTeam.teamId)
         {
             SetState(TankState.Idle);

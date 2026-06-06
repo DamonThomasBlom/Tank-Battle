@@ -10,6 +10,10 @@ public class CaptureZone : MonoBehaviour
     public float captureProgress = 0f;
     public float captureSpeed = 5f;
     public float decaptureSpeed = 7f;
+    public float maxCaptureProgress = 100f;
+
+    [Header("Scoring")]
+    public float scorePerSecond = 1f;
 
     [Header("References")]
     public Transform centerPoint;
@@ -20,62 +24,83 @@ public class CaptureZone : MonoBehaviour
     void Update()
     {
         UpdateCapture();
+        UpdateScore();
+    }
+
+    void UpdateScore()
+    {
+        // Only give score if fully captured
+        if (teamOwner == -1) return;
+        if (captureProgress < maxCaptureProgress) return;
+
+        GameManager.Instance.IncrementTeamScore(teamOwner, scorePerSecond * Time.deltaTime);
     }
 
     void UpdateCapture()
     {
         if (tanksInZone.Count == 0)
+            return; // ❌ DO NOTHING → no more decay when empty
+
+        Dictionary<int, int> teamCounts = new Dictionary<int, int>();
+
+        foreach (var t in tanksInZone)
         {
-            // Slowly decay back to neutral
-            captureProgress = Mathf.MoveTowards(captureProgress, 0f, decaptureSpeed * Time.deltaTime);
+            if (!teamCounts.ContainsKey(t.teamId))
+                teamCounts[t.teamId] = 0;
+
+            teamCounts[t.teamId]++;
+        }
+
+        // Find top 2 teams
+        int bestTeam = -1;
+        int bestCount = 0;
+
+        int secondBestCount = 0;
+
+        foreach (var kvp in teamCounts)
+        {
+            if (kvp.Value > bestCount)
+            {
+                secondBestCount = bestCount;
+                bestCount = kvp.Value;
+                bestTeam = kvp.Key;
+            }
+            else if (kvp.Value > secondBestCount)
+            {
+                secondBestCount = kvp.Value;
+            }
+        }
+
+        int netAdvantage = bestCount - secondBestCount;
+
+        // If equal → contested → no movement
+        if (netAdvantage <= 0)
+            return;
+
+        float delta = netAdvantage * captureSpeed * Time.deltaTime;
+
+        // 🔥 If zone owned by someone else → move toward neutral first
+        if (teamOwner != -1 && teamOwner != bestTeam)
+        {
+            captureProgress -= delta;
 
             if (captureProgress <= 0f)
+            {
+                captureProgress = 0f;
                 teamOwner = -1;
+            }
 
             return;
         }
 
-        int attackingTeam = GetDominantTeam();
+        // 🔥 Capturing or reinforcing
+        captureProgress += delta;
 
-        // If mixed teams → contested → slow or no capture
-        if (attackingTeam == -2)
+        if (captureProgress >= maxCaptureProgress)
         {
-            captureProgress = Mathf.MoveTowards(captureProgress, 0f, decaptureSpeed * Time.deltaTime);
-            return;
+            captureProgress = maxCaptureProgress;
+            teamOwner = bestTeam;
         }
-
-        // If already owned by same team → no need to capture
-        if (teamOwner == attackingTeam)
-        {
-            captureProgress = Mathf.MoveTowards(captureProgress, 100f, captureSpeed * Time.deltaTime);
-            return;
-        }
-
-        // If neutral or enemy owned → capture
-        captureProgress += captureSpeed * Time.deltaTime;
-
-        if (captureProgress >= 100f)
-        {
-            teamOwner = attackingTeam;
-            captureProgress = 100f;
-        }
-    }
-
-    int GetDominantTeam()
-    {
-        if (tanksInZone.Count == 0)
-            return -1;
-
-        int team = tanksInZone[0].teamId;
-
-        foreach (var tank in tanksInZone)
-        {
-            // If multiple teams present → contested
-            if (tank.teamId != team)
-                return -2;
-        }
-
-        return team;
     }
 
     private void OnTriggerEnter(Collider other)

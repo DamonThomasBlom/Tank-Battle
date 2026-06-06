@@ -13,6 +13,7 @@ public class Health : MonoBehaviour
     public float respawnDelay = 3f;
 
     public UnityEvent OnDie = new UnityEvent();
+    public UnityEvent OnTakeDamage = new UnityEvent();
 
     private bool isDead = false;
     private NavMeshAgent agent;
@@ -37,8 +38,11 @@ public class Health : MonoBehaviour
 
         //Debug.Log("Take Damage: " + amount + ", Current Health: " + currentHealth);
 
+        OnTakeDamage.Invoke();
+
         if (currentHealth <= 0)
         {
+            GameManager.Instance.IncrementTeamKills(attackerTeam, 1);
             Die();
         }
     }
