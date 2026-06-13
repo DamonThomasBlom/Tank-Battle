@@ -1,4 +1,5 @@
-﻿using Unity.VisualScripting;
+﻿using NUnit.Framework.Internal;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -16,6 +17,7 @@ public class TankAI : MonoBehaviour
 {
     [Header("Target")]
     public Transform target;
+    public float enemyDetectionRadius = 100f;
 
     [Header("Turret & Firing")]
     public Transform turret;
@@ -46,8 +48,9 @@ public class TankAI : MonoBehaviour
     // Private variables
     private float fireTimer;
     private Vector3 currentRandomOffset;
-    private float lastOffsetUpdateTime;
+    private float accuracyUpdateElapsedTime;
     private bool canSeeTarget = true; // Will be used for future LOS implementation
+    private Vector3 targetZoneRandomOffset;
 
     [SerializeField] private TankState currentState;
     private CaptureZone targetZone;
@@ -87,6 +90,14 @@ public class TankAI : MonoBehaviour
     {
         if (!agent.enabled) return;
 
+        // Update our accuracy so its random
+        accuracyUpdateElapsedTime += Time.deltaTime;
+        if (accuracyUpdateElapsedTime >= inaccuracyUpdateInterval)
+        {
+            accuracyUpdateElapsedTime = 0;
+            UpdateRandomOffset();
+        }
+
         elapsedTimeSinceEvaluation += Time.deltaTime;
         if (elapsedTimeSinceEvaluation > randomEvaluateStep)
         {
@@ -121,6 +132,7 @@ public class TankAI : MonoBehaviour
         if (bestZone != null)
         {
             targetZone = bestZone;
+            targetZoneRandomOffset = Random.insideUnitSphere * 10f;
             SetState(TankState.MovingToCapture);
             return;
         }
@@ -274,8 +286,7 @@ public class TankAI : MonoBehaviour
 
     Transform GetClosestEnemy()
     {
-        float detectionRadius = 60f;
-        Collider[] hits = Physics.OverlapSphere(transform.position, detectionRadius);
+        Collider[] hits = Physics.OverlapSphere(transform.position, enemyDetectionRadius);
 
         Transform bestTarget = null;
         float closestDist = float.MaxValue;
@@ -315,7 +326,12 @@ public class TankAI : MonoBehaviour
             return;
         }
 
-        agent.SetDestination(targetZone.centerPoint.position);
+        Vector3 targetPos = targetZone.centerPoint.position + targetZoneRandomOffset;
+
+        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 5f, NavMesh.AllAreas))
+        {
+            agent.SetDestination(hit.position);
+        }
 
         //float dist = Vector3.Distance(transform.position, targetZone.centerPoint.position);
 
@@ -426,7 +442,6 @@ public class TankAI : MonoBehaviour
         {
             float inaccuracyAmount = (1f - accuracy) * 10f;
             currentRandomOffset = Random.insideUnitSphere * inaccuracyAmount;
-            lastOffsetUpdateTime = Time.time;
         }
         else
         {

@@ -12,15 +12,19 @@ public class Health : MonoBehaviour
     public Transform TankObject;
     public float respawnDelay = 3f;
 
+    public bool debug;
+
     public UnityEvent OnDie = new UnityEvent();
     public UnityEvent OnTakeDamage = new UnityEvent();
 
     private bool isDead = false;
     private NavMeshAgent agent;
+    private Team team;
 
     void Start()
     {
         agent = GetComponentInChildren<NavMeshAgent>();
+        team = GetComponentInChildren<Team>();
         currentHealth = maxHealth;
     }
 
@@ -36,7 +40,8 @@ public class Health : MonoBehaviour
 
         currentHealth -= amount;
 
-        //Debug.Log("Take Damage: " + amount + ", Current Health: " + currentHealth);
+        if (debug)
+            Debug.Log("Take Damage: " + amount + ", Current Health: " + currentHealth);
 
         OnTakeDamage.Invoke();
 
@@ -66,7 +71,7 @@ public class Health : MonoBehaviour
         TankObject.gameObject.SetActive(true);
 
         // Reset position
-        Vector3 spawn = RespawnManager.Instance.RandomSpawnPoint();
+        Vector3 spawn = RespawnManager.Instance.GetSmartSpawnPoint(team.teamId);
 
         if (spawn != null)
         {

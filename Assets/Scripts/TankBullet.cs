@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UIElements;
 
 public class TankBullet : MonoBehaviour
 {
@@ -76,21 +77,20 @@ public class TankBullet : MonoBehaviour
     {
         float radius = explosionCameraShakeRadius;
 
-        Collider[] hits = Physics.OverlapSphere(transform.position, radius);
+        var healths = Utility.GetHealthInRadius(transform.position, radius);
 
-        foreach (var hit in hits)
+        foreach (var health in healths)
         {
-            Health health = hit.GetComponentInParent<Health>();
             if (health == null) continue;
 
-            Team targetTeam = hit.GetComponentInParent<Team>();
+            Team targetTeam = health.GetComponentInParent<Team>();
 
             // 🚫 Friendly fire check
             if (targetTeam != null && targetTeam.teamId == ownerTeam)
                 continue;
 
             // 📏 Distance-based damage falloff
-            float distance = Vector3.Distance(transform.position, hit.transform.position);
+            float distance = Vector3.Distance(transform.position, health.TankObject.transform.position);
 
             float damagePercent = 1f - (distance / radius);
             damagePercent = Mathf.Clamp01(damagePercent);
