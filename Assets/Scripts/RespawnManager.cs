@@ -1,7 +1,10 @@
 using System.Collections.Generic;
-using Unity.AppUI.UI;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class RespawnManager : MonoBehaviour
 {
@@ -128,7 +131,39 @@ public class RespawnManager : MonoBehaviour
         return basePosition;
     }
 
-    private void OnDrawGizmos()
+
+
+    [ContextMenu("Align Spawn Points To Ground")]
+    void AlignSpawnPointsToGround()
+    {
+        if (spawnPoints == null || spawnPoints.Count == 0)
+        {
+            Debug.LogWarning("No spawn points assigned.");
+            return;
+        }
+
+        int alignedCount = 0;
+
+        foreach (var point in spawnPoints)
+        {
+            if (point == null) continue;
+
+            Vector3 rayStart = point.position + Vector3.up * 50f;
+
+            if (Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit, 100f))
+            {
+    #if UNITY_EDITOR
+                Undo.RecordObject(point, "Align Spawn Point");
+    #endif
+                point.position = hit.point;
+                alignedCount++;
+            }
+        }
+
+        Debug.Log($"Aligned {alignedCount} spawn points to ground.");
+    }
+
+private void OnDrawGizmos()
     {
         if (spawnPoints == null) return;
 

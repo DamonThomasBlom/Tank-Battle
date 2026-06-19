@@ -47,7 +47,7 @@ public class Health : MonoBehaviour
 
         if (currentHealth <= 0)
         {
-            GameManager.Instance.IncrementTeamKills(attackerTeam, 1);
+            GameManager.Instance?.IncrementTeamKills(attackerTeam, 1);
             Die();
         }
     }

@@ -1,7 +1,7 @@
-﻿using NUnit.Framework.Internal;
-using Unity.VisualScripting;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using Color = UnityEngine.Color;
 
 public enum TankState
 {
@@ -15,19 +15,19 @@ public enum TankState
 
 public class TankAI : MonoBehaviour
 {
+    [SerializeField] private TankState currentState;
+    public NavMeshPathStatus PathStatus;
+    public LayerMask TanksLayer;
+    public LayerMask LOSLayer;
+
     [Header("Target")]
     public Transform target;
     public float enemyDetectionRadius = 100f;
 
     [Header("Turret & Firing")]
-    public Transform turret;
-    public Transform firePoint;
-    public GameObject shellPrefab;
+    public TankCannon Cannon;
 
     [Header("Ballistics")]
-    public float muzzleVelocity = 20f;
-    public float gravityScale = 0.1f;
-    [SerializeField] float elevationFactor = 0.01f;
     public float predictionMultiplier = 1f;
 
     [Header("Aiming Settings")]
@@ -36,29 +36,31 @@ public class TankAI : MonoBehaviour
     [Range(0, 1)]
     public float aimThreshold = 0.75f; // Formerly hardcoded 0.75f
     public float maxAimDistance = 100f; // Distance limit for aiming
-    public float turretTurnSpeed = 2f;
 
     [Header("Firing Settings")]
-    public float fireCooldown = 2f;
     public float inaccuracyUpdateInterval = 2f; // Update random offset every 2 seconds
 
     [Header("Navigation")]
     [SerializeField] private NavMeshAgent agent;
 
+    public float yOffset = 0.01f;
+
     // Private variables
-    private float fireTimer;
     private Vector3 currentRandomOffset;
     private float accuracyUpdateElapsedTime;
-    private bool canSeeTarget = true; // Will be used for future LOS implementation
-    private Vector3 targetZoneRandomOffset;
 
-    [SerializeField] private TankState currentState;
     private CaptureZone targetZone;
     private Team myTeam;
 
     float evaluateStateStep = 1f;
     float randomEvaluateStep = 0;
     float elapsedTimeSinceEvaluation = 0;
+
+    Vector3 lastSetDestination;
+    float repathThreshold = 2f; // tweak this
+    float targetRepathTimer;
+    float targetRepathInterval = 1f;
+    float zoneMoveTimer;
 
     void Start()
     {
@@ -69,8 +71,8 @@ public class TankAI : MonoBehaviour
         {
             health.OnDie.AddListener(() =>
             {
+                SetTarget(null);
                 SetState(TankState.Idle);
-                target = null;
 
                 // Remove self from any capture zones we were in
                 var captureZones = FindObjectsByType<CaptureZone>();
@@ -89,6 +91,12 @@ public class TankAI : MonoBehaviour
     void Update()
     {
         if (!agent.enabled) return;
+        PathStatus = agent.pathStatus;
+        if (agent.pathPending)
+        {
+            //Debug.Log("Pending Path...", gameObject);
+            return;
+        }
 
         // Update our accuracy so its random
         accuracyUpdateElapsedTime += Time.deltaTime;
@@ -118,13 +126,13 @@ public class TankAI : MonoBehaviour
 
         if (closestEnemy != null)
         {
-            target = closestEnemy;
+            SetTarget(closestEnemy);
             SetState(TankState.Attacking);
             return;
         }
 
         // If we lost enemy
-        target = null;
+        SetTarget(null);
 
         // Capture logic
         CaptureZone bestZone = FindBestZone();
@@ -132,7 +140,6 @@ public class TankAI : MonoBehaviour
         if (bestZone != null)
         {
             targetZone = bestZone;
-            targetZoneRandomOffset = Random.insideUnitSphere * 10f;
             SetState(TankState.MovingToCapture);
             return;
         }
@@ -202,7 +209,7 @@ public class TankAI : MonoBehaviour
         return best;
     }
 
-    float preferredDistance = 40f;
+    public float preferredDistance = 40f;
 
     float strafeTimer;
     Vector3 strafeDirection;
@@ -237,9 +244,9 @@ public class TankAI : MonoBehaviour
 
         if (dist > preferredDistance)
         {
-            movePos = target.position;
+            movePos = target.position; // move closer
         }
-        else if (dist < preferredDistance * 0.5f)
+        else if (dist < preferredDistance * 0.5f) // move away
         {
             movePos = transform.position - (target.position - transform.position).normalized * 10f;
         }
@@ -249,44 +256,25 @@ public class TankAI : MonoBehaviour
             movePos = transform.position + strafeDirection * 2f;
         }
 
-        if (NavMesh.SamplePosition(movePos, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+        targetRepathTimer -= Time.deltaTime;
+
+        if (targetRepathTimer <= 0f)
         {
-            agent.SetDestination(hit.position);
+            targetRepathTimer = Random.Range(targetRepathInterval, targetRepathInterval * 4); // randomise to make movement less predictable
+
+            if (NavMesh.SamplePosition(movePos, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+            {
+                SetDestinationIfNeeded(hit.position);
+            }
         }
 
         AimTurret();
         TryFire();
     }
 
-    bool IsEnemyNearby()
-    {
-        float detectionRadius = 60f;
-
-        Collider[] hits = Physics.OverlapSphere(transform.position, detectionRadius);
-
-        foreach (var hit in hits)
-        {
-            Team other = hit.GetComponentInParent<Team>();
-
-            if (other != null && other != this && other.teamId != myTeam.teamId)
-            {
-                bool hasLOS = HasLineOfSight(other.transform);
-
-                if (hasLOS || Vector3.Distance(transform.position, other.transform.position) < 10f)
-                {
-                    target = hit.transform;
-                    return true;
-                }
-            }
-        }
-
-        target = null;
-        return false;
-    }
-
     Transform GetClosestEnemy()
     {
-        Collider[] hits = Physics.OverlapSphere(transform.position, enemyDetectionRadius);
+        Collider[] hits = Physics.OverlapSphere(transform.position, enemyDetectionRadius, TanksLayer);
 
         Transform bestTarget = null;
         float closestDist = float.MaxValue;
@@ -302,10 +290,10 @@ public class TankAI : MonoBehaviour
 
             float dist = Vector3.Distance(transform.position, enemyTank.transform.position);
 
-            bool hasLOS = HasLineOfSight(enemyTank.transform);
+            bool hasLOS = HasLineOfSight(hit);
 
             // Allow close enemies even without LOS
-            if (!hasLOS && dist > 15f)
+            if (!hasLOS)
                 continue;
 
             if (dist < closestDist)
@@ -318,6 +306,9 @@ public class TankAI : MonoBehaviour
         return bestTarget;
     }
 
+    float moveToPointElapsedTime = 0;
+    float moveToZoneInterval = 5f;
+
     void MoveToZone()
     {
         if (targetZone == null)
@@ -326,28 +317,33 @@ public class TankAI : MonoBehaviour
             return;
         }
 
-        Vector3 targetPos = targetZone.centerPoint.position + targetZoneRandomOffset;
-
-        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 5f, NavMesh.AllAreas))
+        if (targetZone.teamOwner == myTeam.teamId)
         {
-            agent.SetDestination(hit.position);
+            SetState(TankState.Idle);
+            return;
         }
-
-        //float dist = Vector3.Distance(transform.position, targetZone.centerPoint.position);
 
         if (targetZone.tanksInZone.Contains(this.myTeam))
         {
             SetState(TankState.Capturing);
+            return;
         }
 
-        if (targetZone.teamOwner == myTeam.teamId)
+        if (lastSetDestination != Vector3.positiveInfinity)
         {
-            SetState(TankState.Idle);
+            moveToPointElapsedTime += Time.deltaTime;
+            if (moveToPointElapsedTime < moveToZoneInterval)
+                return;
+            moveToPointElapsedTime = 0;
+        }
+
+        Vector3 targetPos = targetZone.GetValidNavMeshPoint();
+
+        if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 5f, NavMesh.AllAreas))
+        {
+            SetDestinationIfNeeded(hit.position);
         }
     }
-
-    Vector3 zoneMovePoint;
-    float zoneMoveTimer;
 
     void StayInZone()
     {
@@ -361,15 +357,11 @@ public class TankAI : MonoBehaviour
 
         if (zoneMoveTimer <= 0f)
         {
-            Vector3 randomOffset = Random.insideUnitSphere * 10f;
-            randomOffset.y = 0;
+            Vector3 targetPos = targetZone.GetValidNavMeshPoint();
 
-            Vector3 targetPos = targetZone.centerPoint.position + randomOffset;
-
-            if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+            if (NavMesh.SamplePosition(targetPos, out NavMeshHit hit, 5f, NavMesh.AllAreas))
             {
-                zoneMovePoint = hit.position;
-                agent.SetDestination(zoneMovePoint);
+                SetDestinationIfNeeded(hit.position);
             }
 
             zoneMoveTimer = Random.Range(2f, 5f); // change position every few seconds
@@ -404,7 +396,7 @@ public class TankAI : MonoBehaviour
             agent.ResetPath(); // 🔥 important
         }
 
-        agent.SetDestination(patrolPoint);
+        SetDestinationIfNeeded(patrolPoint);
 
         float dist = Vector3.Distance(transform.position, patrolPoint);
 
@@ -418,21 +410,38 @@ public class TankAI : MonoBehaviour
     {
         if (currentState == newState) return;
         //Debug.Log($"Tank {name} changing state from {currentState} to {newState}");
-
         currentState = newState;
-        agent.ResetPath(); 
+
+        agent.ResetPath();
+        lastSetDestination = Vector3.positiveInfinity; 
+        currentRandomOffset = Vector3.zero;
     }
 
-    bool HasLineOfSight(Transform target)
+    bool HasLineOfSight(Collider collider)
     {
-        Vector3 dir = (target.position - firePoint.position).normalized;
+        Vector3 dir = (collider.bounds.center - Cannon.firePoint.position).normalized;
 
-        if (Physics.Raycast(firePoint.position, dir, out RaycastHit hit, maxAimDistance))
+        if (Physics.Raycast(Cannon.firePoint.position, dir, out RaycastHit hit, maxAimDistance, LOSLayer))
         {
-            return hit.transform.root == target.root;
+            Debug.DrawLine(Cannon.firePoint.position, hit.point, Color.cyan, 1f);
+            if (hit.collider == collider)
+            {
+                return true;
+            }
         }
 
         return false;
+    }
+
+    void SetDestinationIfNeeded(Vector3 newPos)
+    {
+        // Only update if far enough from last destination
+        if ((newPos - lastSetDestination).sqrMagnitude < repathThreshold * repathThreshold)
+            return;
+
+        //Debug.Log($"Setting new destination for {gameObject.name} - Current State: {currentState}");
+        agent.SetDestination(newPos);
+        lastSetDestination = newPos;
     }
 
     void UpdateRandomOffset()
@@ -453,96 +462,115 @@ public class TankAI : MonoBehaviour
     {
         if (target == null) return;
 
-        // Check distance limit
-        float distanceToTarget = Vector3.Distance(firePoint.position, target.position);
-        if (distanceToTarget > maxAimDistance)
-        {
-            // Target is too far to aim at properly
-            return;
-        }
+        Vector3 firePointPos = Cannon.firePoint.position;
+        float distanceToTarget = Vector3.Distance(firePointPos, target.position);
+        if (distanceToTarget > maxAimDistance) return;
 
-        // Estimate target velocity (if it has a Rigidbody)
+        // 1. Target velocity detection
         Vector3 targetVel = Vector3.zero;
         if (target.TryGetComponent<Rigidbody>(out var trb))
             targetVel = trb.linearVelocity;
 
-        // Predict position
-        Vector3 toTarget = target.position - firePoint.position;
-        float timeToTarget = (toTarget.magnitude / muzzleVelocity) * predictionMultiplier;
-        Vector3 predictedPos = target.position + targetVel * timeToTarget;
+        // 2. High-precision Time of Flight prediction iteration
+        float timeToTarget = distanceToTarget / Cannon.muzzleVelocity;
+        Vector3 predictedPos = target.position + (targetVel * timeToTarget * predictionMultiplier) + currentRandomOffset;
 
-        // Add persistent random offset (updated every 2 seconds)
-        predictedPos += currentRandomOffset;
+        Vector3 toPredicted = predictedPos - firePointPos;
+        float y = toPredicted.y;
+        float x = new Vector3(toPredicted.x, 0, toPredicted.z).magnitude;
 
-        // Add height to compensate for bullet drop
-        float horizontalDistance = new Vector2(toTarget.x, toTarget.z).magnitude;
-        Vector3 heightOffset = new Vector3(0, (horizontalDistance * horizontalDistance) * elevationFactor, 0);
-        predictedPos += heightOffset;
+        float g = Mathf.Abs(Physics.gravity.y) * Cannon.gravityScale;
+        if (g < 0.001f) g = 0.001f;
 
-        // Aim
-        Vector3 dir = (predictedPos - turret.position).normalized;
-        Quaternion lookRotation = Quaternion.LookRotation(dir);
-        turret.rotation = Quaternion.Slerp(turret.rotation, lookRotation, Time.deltaTime * turretTurnSpeed);
+        float v = Cannon.muzzleVelocity;
+        float v2 = v * v;
+        float v4 = v2 * v2;
+
+        float root = v4 - g * (g * (x * x) + 2 * y * v2);
+
+        if (root >= 0)
+        {
+            // 3. Solve exact launch angle (theta)
+            float tanTheta = (v2 - Mathf.Sqrt(root)) / (g * x);
+            float angle = Mathf.Atan(tanTheta);
+
+            // 4. Update prediction pass based on true flight time
+            float exactTimeToTarget = x / (v * Mathf.Cos(angle));
+            predictedPos = target.position + (targetVel * exactTimeToTarget * predictionMultiplier) + currentRandomOffset;
+
+            // Recalculate geometric bounds for final accuracy pass
+            toPredicted = predictedPos - firePointPos;
+            y = toPredicted.y;
+            x = new Vector3(toPredicted.x, 0, toPredicted.z).magnitude;
+
+            root = v4 - g * (g * (x * x) + 2 * y * v2);
+            if (root >= 0)
+            {
+                tanTheta = (v2 - Mathf.Sqrt(root)) / (g * x);
+                angle = Mathf.Atan(tanTheta);
+
+                // 5. VECTOR ELEVATION ALIGNMENT (The Fix)
+                // Isolate horizontal facing direction
+                Vector3 horizontalDir = new Vector3(toPredicted.x, 0, toPredicted.z).normalized;
+
+                // Create a clean rotation vector elevated upwards by our exact 'angle' radians
+                Vector3 fireDirection = (horizontalDir * Mathf.Cos(angle)) + (Vector3.up * Mathf.Sin(angle));
+
+                // Project out 50+ units forward in that exact vector angle to give SetAimPoint a clear, high-altitude target
+                Vector3 finalAimPoint = firePointPos + (fireDirection * Mathf.Max(50f, distanceToTarget));
+
+                // Calculates a continuous multiplier that starts at 1.0 at 100 meters, and scales up linearly
+                float multiplier = 1f + Mathf.Max(0f, (distanceToTarget - 80f) / 50f) * 0.5f;
+
+                finalAimPoint.y += yOffset * multiplier;
+
+                Cannon.SetAimPoint(finalAimPoint);
+                return;
+            }
+        }
+
+        // Out of range fallback
+        Cannon.SetAimPoint(predictedPos);
     }
 
     void TryFire()
     {
-        fireTimer -= Time.deltaTime;
-        if (fireTimer > 0) return;
-
-        // Check distance limit for firing
         if (target == null) return;
-        float distanceToTarget = Vector3.Distance(firePoint.position, target.position);
+
+        float distanceToTarget = Vector3.Distance(Cannon.firePoint.position, target.position);
         if (distanceToTarget > maxAimDistance)
         {
             return; // Too far to shoot
         }
 
-        Vector3 dirToTarget = (target.position - firePoint.position).normalized;
-        float aimAccuracy = Vector3.Dot(turret.forward, dirToTarget);
+        Vector3 dirToTarget = (target.position - Cannon.firePoint.position).normalized;
+        float aimAccuracy = Vector3.Dot(Cannon.barrel.forward, dirToTarget);
 
         // Use the adjustable aimThreshold instead of hardcoded 0.75f
         if (aimAccuracy > aimThreshold)
         {
-            FireShell();
-            fireTimer = fireCooldown;
+            Cannon.Fire();
         }
     }
 
-    void FireShell()
+    void SetTarget(Transform newTarget)
     {
-        if (shellPrefab == null || firePoint == null) return;
+        if (newTarget != null && newTarget == target) return; // No change
 
-        Quaternion shotRot = firePoint.rotation;
-        GameObject shell = Instantiate(shellPrefab, firePoint.position, firePoint.rotation);
-
-        var bullet = shell.GetComponent<TankBullet>();
-        if (bullet != null)
-        {
-            bullet.ownerTeam = myTeam.teamId;
-            bullet.SetOwner(gameObject);
-        }
-
-        if (shell.TryGetComponent<Rigidbody>(out var srb))
-        {
-            srb.linearVelocity = firePoint.forward * muzzleVelocity;
-            srb.useGravity = false;
-
-            var projectile = shell.AddComponent<ProjectileGravity>();
-            projectile.gravityScale = gravityScale;
-        }
+        //Cannon.SetTarget(newTarget);
+        target = newTarget;
     }
 
 #if UNITY_EDITOR
     // Draw editor gizmos for visualization
     void OnDrawGizmosSelected()
     {
-        if (turret == null || firePoint == null) return;
+        if (Cannon.barrel == null || Cannon.firePoint == null) return;
 
         // Draw turret's aim direction
         Gizmos.color = Color.red;
-        Vector3 aimDirection = turret.forward * 10f;
-        Gizmos.DrawRay(turret.position, aimDirection);
+        Vector3 aimDirection = Cannon.barrel.forward * 10f;
+        Gizmos.DrawRay(Cannon.barrel.position, aimDirection);
 
         // Draw turret's forward arc (based on aimThreshold)
         DrawAimThresholdGizmo();
@@ -568,47 +596,47 @@ public class TankAI : MonoBehaviour
         int segments = 20;
         float radius = Mathf.Tan(aimAngle * Mathf.Deg2Rad) * 10f;
 
-        Vector3 forward = turret.forward * 10f;
-        Vector3 up = turret.up;
-        Vector3 right = turret.right;
+        Vector3 forward = Cannon.barrel.forward * 10f;
+        Vector3 up = Cannon.barrel.up;
+        Vector3 right = Cannon.barrel.right;
 
         // Draw circle at the end of the cone
-        Vector3 previousPoint = turret.position + forward + up * radius;
+        Vector3 previousPoint = Cannon.barrel.position + forward + up * radius;
         for (int i = 1; i <= segments; i++)
         {
             float angle = 2f * Mathf.PI * i / segments;
-            Vector3 point = turret.position + forward +
+            Vector3 point = Cannon.barrel.position + forward +
                            up * (radius * Mathf.Sin(angle)) +
                            right * (radius * Mathf.Cos(angle));
-            Gizmos.DrawLine(turret.position + forward, point);
+            Gizmos.DrawLine(Cannon.barrel.position + forward, point);
             Gizmos.DrawLine(previousPoint, point);
             previousPoint = point;
         }
 
         // Draw threshold angle lines
         Gizmos.color = Color.yellow;
-        Vector3 leftBoundary = Quaternion.AngleAxis(-aimAngle, turret.up) * turret.forward * 10f;
-        Vector3 rightBoundary = Quaternion.AngleAxis(aimAngle, turret.up) * turret.forward * 10f;
-        Vector3 upBoundary = Quaternion.AngleAxis(aimAngle, -turret.right) * turret.forward * 10f;
-        Vector3 downBoundary = Quaternion.AngleAxis(aimAngle, turret.right) * turret.forward * 10f;
+        Vector3 leftBoundary = Quaternion.AngleAxis(-aimAngle, Cannon.barrel.up) * Cannon.barrel.forward * 10f;
+        Vector3 rightBoundary = Quaternion.AngleAxis(aimAngle, Cannon.barrel.up) * Cannon.barrel.forward * 10f;
+        Vector3 upBoundary = Quaternion.AngleAxis(aimAngle, -Cannon.barrel.right) * Cannon.barrel.forward * 10f;
+        Vector3 downBoundary = Quaternion.AngleAxis(aimAngle, Cannon.barrel.right) * Cannon.barrel.forward * 10f;
 
-        Gizmos.DrawRay(turret.position, leftBoundary);
-        Gizmos.DrawRay(turret.position, rightBoundary);
-        Gizmos.DrawRay(turret.position, upBoundary);
-        Gizmos.DrawRay(turret.position, downBoundary);
+        Gizmos.DrawRay(Cannon.barrel.position, leftBoundary);
+        Gizmos.DrawRay(Cannon.barrel.position, rightBoundary);
+        Gizmos.DrawRay(Cannon.barrel.position, upBoundary);
+        Gizmos.DrawRay(Cannon.barrel.position, downBoundary);
     }
 
     void DrawMaxAimDistanceGizmo()
     {
         Gizmos.color = new Color(0f, 1f, 0f, 0.1f); // Green, very transparent
-        Gizmos.DrawWireSphere(turret.position, maxAimDistance);
+        Gizmos.DrawWireSphere(Cannon.barrel.position, maxAimDistance);
 
         // Draw distance to target if target exists
         if (target != null)
         {
-            float distance = Vector3.Distance(turret.position, target.position);
+            float distance = Vector3.Distance(Cannon.barrel.position, target.position);
             Gizmos.color = distance <= maxAimDistance ? Color.green : Color.red;
-            Gizmos.DrawLine(turret.position, target.position);
+            Gizmos.DrawLine(Cannon.barrel.position, target.position);
 
             // Draw text showing distance (requires Handles, which we can't use in OnDrawGizmos)
             // You could use Handles.Label in OnDrawGizmos if needed
@@ -620,11 +648,11 @@ public class TankAI : MonoBehaviour
         if (accuracy >= 0.99f) return; // No inaccuracy to show
 
         // Draw the current random offset as a sphere at the predicted aim point
-        if (target != null && canSeeTarget)
+        if (target != null)
         {
             // Calculate predicted position (simplified for gizmo)
-            Vector3 toTarget = target.position - firePoint.position;
-            float timeToTarget = (toTarget.magnitude / muzzleVelocity) * predictionMultiplier;
+            Vector3 toTarget = target.position - Cannon.firePoint.position;
+            float timeToTarget = (toTarget.magnitude / Cannon.muzzleVelocity) * predictionMultiplier;
             Vector3 predictedPos = target.position;
 
             // Add the current random offset

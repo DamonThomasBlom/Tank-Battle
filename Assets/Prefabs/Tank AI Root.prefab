@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5051468425810042603}
-  m_Layer: 6
+  m_Layer: 10
   m_Name: Barrel-Pivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -44,7 +44,7 @@ GameObject:
   - component: {fileID: 574945828602874868}
   - component: {fileID: 1541142616630818871}
   - component: {fileID: 4009920492917263450}
-  m_Layer: 6
+  m_Layer: 10
   m_Name: 'barrel end '
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -134,7 +134,7 @@ GameObject:
   - component: {fileID: 3850593424032754450}
   - component: {fileID: 4883220941534129653}
   - component: {fileID: 6833214485601657197}
-  m_Layer: 6
+  m_Layer: 10
   m_Name: 'barrel '
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -225,7 +225,7 @@ GameObject:
   - component: {fileID: 9133678234674765608}
   - component: {fileID: 226812797775160107}
   - component: {fileID: 5002421690506314588}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Barrel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -315,7 +315,7 @@ GameObject:
   - component: {fileID: 8029340472882818117}
   - component: {fileID: 2498735610118878327}
   - component: {fileID: 7834225352090034533}
-  m_Layer: 6
+  m_Layer: 10
   m_Name: Tank-GFX
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -409,7 +409,7 @@ GameObject:
   - component: {fileID: 998879086024779441}
   - component: {fileID: 7906041578439842870}
   - component: {fileID: 3125856697252154912}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Tank AI Root
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -430,6 +430,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6009781877023457072}
+  - {fileID: 6707928044966072180}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &998879086024779441
@@ -468,6 +469,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Team
   teamId: 1
+  TankObject: {fileID: 0}
 --- !u!114 &3125856697252154912
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -494,7 +496,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7307554621905964661}
-  m_Layer: 5
+  m_Layer: 10
   m_Name: Handle Slide Area
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -532,7 +534,7 @@ GameObject:
   - component: {fileID: 1794985317400153628}
   - component: {fileID: 4001264841257055198}
   - component: {fileID: 4311804191034785561}
-  m_Layer: 5
+  m_Layer: 10
   m_Name: Fill
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -609,7 +611,7 @@ GameObject:
   - component: {fileID: 1436637207491391775}
   - component: {fileID: 694857737930982934}
   - component: {fileID: 3630482662490039589}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Tank
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -670,23 +672,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9fc1cad8982997c44b6dd7974f24a67e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TankAI
+  currentState: 0
+  PathStatus: 0
+  TanksLayer:
+    serializedVersion: 2
+    m_Bits: 1088
+  LOSLayer:
+    serializedVersion: 2
+    m_Bits: 1856
   target: {fileID: 0}
   enemyDetectionRadius: 75
-  turret: {fileID: 5051468425810042603}
-  firePoint: {fileID: 4982521031305116376}
-  shellPrefab: {fileID: 6373038903004428075, guid: 71a2da2f8bc5d834b913c3608d0be3de, type: 3}
-  muzzleVelocity: 30
-  gravityScale: 0.4
-  elevationFactor: 0.0025
+  Cannon: {fileID: 880760238720185727}
   predictionMultiplier: 1.5
   accuracy: 0.8
   aimThreshold: 0.75
   maxAimDistance: 100
-  turretTurnSpeed: 2
-  fireCooldown: 2
   inaccuracyUpdateInterval: 3
   agent: {fileID: 0}
-  currentState: 0
+  yOffset: 1
+  preferredDistance: 50
 --- !u!195 &694857737930982934
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -745,7 +749,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 749092320872919308}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: SpawnPoint
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -777,7 +781,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4439765888874417501}
   - component: {fileID: 4600371992548022980}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: SliderParent
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -827,7 +831,7 @@ GameObject:
   - component: {fileID: 3674404216695818141}
   - component: {fileID: 408447749016209289}
   - component: {fileID: 1084842240232762070}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Body
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -917,7 +921,7 @@ GameObject:
   - component: {fileID: 7831821144444183606}
   - component: {fileID: 2107437665481788722}
   - component: {fileID: 8084392105932145005}
-  m_Layer: 6
+  m_Layer: 10
   m_Name: turret .001
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1007,7 +1011,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6882888839013298912}
   - component: {fileID: 2371834235077361334}
-  m_Layer: 5
+  m_Layer: 10
   m_Name: Slider (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1100,7 +1104,7 @@ GameObject:
   - component: {fileID: 1914536578239942869}
   - component: {fileID: 698730259930928241}
   - component: {fileID: 4331357304834265259}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1214,7 +1218,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4982521031305116376}
-  m_Layer: 6
+  m_Layer: 10
   m_Name: ShootSpawn
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1245,7 +1249,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4248334482316799777}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: Turret
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1280,7 +1284,7 @@ GameObject:
   - component: {fileID: 1339895615906422749}
   - component: {fileID: 3588310008628727486}
   - component: {fileID: 2313764656203472155}
-  m_Layer: 5
+  m_Layer: 10
   m_Name: Background
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1355,7 +1359,7 @@ GameObject:
   - component: {fileID: 8366514626287335401}
   - component: {fileID: 1815253896429486798}
   - component: {fileID: 3730778543477883647}
-  m_Layer: 5
+  m_Layer: 10
   m_Name: Handle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1428,7 +1432,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2747301007167143379}
-  m_Layer: 6
+  m_Layer: 10
   m_Name: Turret-Pivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1460,7 +1464,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1282144189386155071}
-  m_Layer: 5
+  m_Layer: 10
   m_Name: Fill Area
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1487,3 +1491,88 @@ RectTransform:
   m_AnchoredPosition: {x: 2.5, y: 0}
   m_SizeDelta: {x: -5, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1001 &2169830587399922842
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 2596370332526218070}
+    m_Modifications:
+    - target: {fileID: 1307697183789388261, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: barrel
+      value: 
+      objectReference: {fileID: 5051468425810042603}
+    - target: {fileID: 1307697183789388261, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: turret
+      value: 
+      objectReference: {fileID: 2747301007167143379}
+    - target: {fileID: 1307697183789388261, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: firePoint
+      value: 
+      objectReference: {fileID: 4982521031305116376}
+    - target: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5820949627766192633, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+      propertyPath: m_Name
+      value: TankCannon
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+--- !u!114 &880760238720185727 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1307697183789388261, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+  m_PrefabInstance: {fileID: 2169830587399922842}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d323dea70b3c7314ca5590b4cad0f7ee, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TankCannon
+--- !u!4 &6707928044966072180 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4831113801697504238, guid: 6c0e59b2ba2158c47a09f9f3285a8e08, type: 3}
+  m_PrefabInstance: {fileID: 2169830587399922842}
+  m_PrefabAsset: {fileID: 0}

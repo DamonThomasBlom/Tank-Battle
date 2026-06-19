@@ -11,7 +11,8 @@ public class CaptureUI : MonoBehaviour
 
     private void Update()
     {
-        Progress.value = CaptureZone.captureProgress;
+        if (Progress.value != CaptureZone.captureProgress)
+            Progress.value = CaptureZone.captureProgress;
 
         if (CaptureZone.teamOwner != previousTeamOwner)
         {

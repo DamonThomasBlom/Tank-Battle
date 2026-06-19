@@ -79,6 +79,7 @@ public class VolumeTankSpawner : MonoBehaviour
         }
 
         Debug.Log($"Spawned {spawnedPositions.Count}/{spawnCount} tanks (Attempts: {attempts})");
+        col.enabled = false;
     }
 
     private Vector3 GetRandomPointInCollider(Collider col)

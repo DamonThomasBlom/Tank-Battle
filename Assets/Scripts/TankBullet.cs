@@ -15,13 +15,30 @@ public class TankBullet : MonoBehaviour
     public float destroyDelay = 0.05f;
     public float explosionCameraShakeRadius = 10f;
     public float maxShakeIntensity = 1f;
+    public float bulletLifetime = 7f;
+
+    public TrailRenderer Trail;
 
     private Rigidbody rb;
     private Collider ownerCollider;
+    bool hasExploded = false;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+    }
+
+    private void OnEnable()
+    {
+        hasExploded = false;
+        if (rb == null)
+            rb = GetComponent<Rigidbody>();
+
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        PoolManager.Instance.DespawnAfterDelay(gameObject, bulletLifetime);
+        Trail.Clear();
     }
 
     void Update()
@@ -33,29 +50,27 @@ public class TankBullet : MonoBehaviour
         }
     }
 
+
     private void OnTriggerEnter(Collider other)
     {
+        if (hasExploded) return;
         if (other == ownerCollider) return;
 
+        hasExploded = true;
         Explode();
 
         // Spawn particle effect
         if (ParticleEffect != null)
         {
-            GameObject effect = Instantiate(
-                ParticleEffect,
-                transform.position,
-                Quaternion.identity
-            );
-
+            GameObject effect = PoolManager.Instance.Spawn(ParticleEffect, transform.position, Quaternion.identity);
             ParticleSystem ps = effect.GetComponentInChildren<ParticleSystem>();
             if (ps != null)
             {
-                Destroy(effect, ps.main.duration + ps.main.startLifetime.constantMax);
+                PoolManager.Instance.DespawnAfterDelay(effect, ps.main.duration + ps.main.startLifetime.constantMax);
             }
             else
             {
-                Destroy(effect, 3f);
+                PoolManager.Instance.DespawnAfterDelay(effect, 3f);
             }
         }
 
@@ -70,7 +85,7 @@ public class TankBullet : MonoBehaviour
             }
         }
 
-        Destroy(gameObject, destroyDelay);
+        PoolManager.Instance.DespawnAfterDelay(gameObject, destroyDelay);
     }
 
     private void Explode()

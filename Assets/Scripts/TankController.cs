@@ -30,6 +30,8 @@ public class TankController : MonoBehaviour
     public float turretTurnSpeed = 120f;       // deg/sec
     public float barrelTurnSpeed = 80f;        // deg/sec
 
+    public TankCannon Cannon;
+
     [Header("=== Shooting ===")]
     public GameObject shellPrefab;             // must have Rigidbody + Collider
     public float muzzleVelocity = 120f;        // initial m/s
@@ -172,96 +174,68 @@ public class TankController : MonoBehaviour
     // === AIMING ===
     void AimTurretAndBarrel()
     {
-        if (!turret || !barrel || !cam) return;
-
-        // pick a spot straight ahead of the camera
         Vector3 targetPoint = cam.transform.position + cam.transform.forward * lookDistance;
+        Cannon.SetAimPoint(targetPoint);
 
-        // --- Yaw turret (LOCAL Y relative to parent up) ---
-        Transform parent = turret.parent;
-        Vector3 planeUp = parent ? parent.up : Vector3.up; // use parent up so turret follows tank tilt
+        //if (!turret || !barrel || !cam) return;
 
-        Vector3 toTarget = targetPoint - turret.position;
-        Vector3 flat = Vector3.ProjectOnPlane(toTarget, planeUp); // remove component along planeUp
+        //// pick a spot straight ahead of the camera
+        //Vector3 targetPoint = cam.transform.position + cam.transform.forward * lookDistance;
 
-        if (flat.sqrMagnitude > 0.0001f)
-        {
-            Vector3 flatDir = flat.normalized;
+        //// --- Yaw turret (LOCAL Y relative to parent up) ---
+        //Transform parent = turret.parent;
+        //Vector3 planeUp = parent ? parent.up : Vector3.up; // use parent up so turret follows tank tilt
 
-            // direction in parent-local space (so yaw is measured relative to parent's axes)
-            Vector3 flatDirLocal = parent ? parent.InverseTransformDirection(flatDir) : flatDir;
+        //Vector3 toTarget = targetPoint - turret.position;
+        //Vector3 flat = Vector3.ProjectOnPlane(toTarget, planeUp); // remove component along planeUp
 
-            // desired yaw in local degrees (atan2: x = left/right, z = forward)
-            float desiredLocalYaw = Mathf.Atan2(flatDirLocal.x, flatDirLocal.z) * Mathf.Rad2Deg;
-            desiredLocalYaw = NormalizeAngle(desiredLocalYaw);
+        //if (flat.sqrMagnitude > 0.0001f)
+        //{
+        //    Vector3 flatDir = flat.normalized;
 
-            // current turret local yaw
-            float currentLocalYaw = NormalizeAngle(turret.localEulerAngles.y);
+        //    // direction in parent-local space (so yaw is measured relative to parent's axes)
+        //    Vector3 flatDirLocal = parent ? parent.InverseTransformDirection(flatDir) : flatDir;
 
-            // delta and clamp by turretTurnSpeed (degrees/sec)
-            float deltaYaw = Mathf.DeltaAngle(currentLocalYaw, desiredLocalYaw);
-            float maxStep = turretTurnSpeed * Time.deltaTime;
-            float yawStep = Mathf.Clamp(deltaYaw, -maxStep, maxStep);
-            float newLocalYaw = currentLocalYaw + yawStep;
+        //    // desired yaw in local degrees (atan2: x = left/right, z = forward)
+        //    float desiredLocalYaw = Mathf.Atan2(flatDirLocal.x, flatDirLocal.z) * Mathf.Rad2Deg;
+        //    desiredLocalYaw = NormalizeAngle(desiredLocalYaw);
 
-            // preserve local X and Z (so turret inherits parent's pitch/roll)
-            float curLocalX = NormalizeAngle(turret.localEulerAngles.x);
-            float curLocalZ = NormalizeAngle(turret.localEulerAngles.z);
+        //    // current turret local yaw
+        //    float currentLocalYaw = NormalizeAngle(turret.localEulerAngles.y);
 
-            turret.localRotation = Quaternion.Euler(curLocalX, newLocalYaw, curLocalZ);
-        }
+        //    // delta and clamp by turretTurnSpeed (degrees/sec)
+        //    float deltaYaw = Mathf.DeltaAngle(currentLocalYaw, desiredLocalYaw);
+        //    float maxStep = turretTurnSpeed * Time.deltaTime;
+        //    float yawStep = Mathf.Clamp(deltaYaw, -maxStep, maxStep);
+        //    float newLocalYaw = currentLocalYaw + yawStep;
 
-        // --- Pitch barrel (local rotation) ---
-        Quaternion desiredRot = Quaternion.LookRotation(targetPoint - barrel.position, turret.up);
+        //    // preserve local X and Z (so turret inherits parent's pitch/roll)
+        //    float curLocalX = NormalizeAngle(turret.localEulerAngles.x);
+        //    float curLocalZ = NormalizeAngle(turret.localEulerAngles.z);
 
-        // Smoothly rotate towards it
-        barrel.rotation = Quaternion.RotateTowards(
-            barrel.rotation,
-            desiredRot,
-            barrelTurnSpeed * Time.deltaTime
-        );
+        //    turret.localRotation = Quaternion.Euler(curLocalX, newLocalYaw, curLocalZ);
+        //}
+
+        //// --- Pitch barrel (local rotation) ---
+        //Quaternion desiredRot = Quaternion.LookRotation(targetPoint - barrel.position, turret.up);
+
+        //// Smoothly rotate towards it
+        //barrel.rotation = Quaternion.RotateTowards(
+        //    barrel.rotation,
+        //    desiredRot,
+        //    barrelTurnSpeed * Time.deltaTime
+        //);
     }
 
     // === SHOOTING ===
 
     void HandleShooting()
     {
-        if (!canShoot || shellPrefab == null || fireKey == KeyCode.None) return;
+        //if (!canShoot || shellPrefab == null || fireKey == KeyCode.None) return;
         if (Input.GetKeyDown(fireKey))
         {
-            FireShell();
+            Cannon.Fire();
         }
-    }
-
-    void FireShell()
-    {
-        if (!firePoint || !shellPrefab) return;
-
-        // Fire straight forward from the fire point
-        Quaternion shotRot = firePoint.rotation;
-        GameObject shell = Instantiate(shellPrefab, firePoint.position, shotRot);
-
-        var bullet = shell.GetComponent<TankBullet>();
-        if (bullet != null)
-        {
-            bullet.ownerTeam = myTeam.teamId;
-            bullet.SetOwner(gameObject);
-        }
-
-        if (shell.TryGetComponent<Rigidbody>(out var srb))
-        {
-            srb.linearVelocity = firePoint.forward * muzzleVelocity;
-            srb.useGravity = false; // disable Unity's default gravity
-
-            var projectile = shell.AddComponent<ProjectileGravity>();
-            projectile.gravityScale = gravityScale; // custom gravity scaling
-        }
-
-        // Apply recoil to tank
-        if (rb)
-            rb.AddForceAtPosition(-firePoint.forward * recoilImpulse, firePoint.position, ForceMode.Impulse);
-
-        StartCoroutine(ReloadRoutine());
     }
 
     IEnumerator ReloadRoutine()
