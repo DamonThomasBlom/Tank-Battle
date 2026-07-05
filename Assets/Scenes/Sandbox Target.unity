@@ -771,6 +771,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Team
   teamId: 3
   TankObject: {fileID: 0}
+  TanksColliders: []
+  CollidersToExclude: []
 --- !u!1001 &1158742855
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7bc8f40b2d7e8c54993750b24011a198, type: 3}
+  m_Name: TankPreset-Artillery
+  m_EditorClassIdentifier: Assembly-CSharp::TankPreset
+  TankName: Artillery
+  preferredDistance: 110
+  accuracy: 0.85
+  aimThreshold: 0.6
+  detectionRadius: 120
+  maxAimDistance: 120
+  moveSpeed: 2
+  acceleration: 3
+  angularSpeed: 30
+  fireCooldown: 1.5
+  muzzleVelocity: 25
+  gravityScale: 0.3
+  damage: 50
+  maxHP: 100
+  scale: 1.1

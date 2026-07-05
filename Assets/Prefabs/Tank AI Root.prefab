@@ -409,6 +409,7 @@ GameObject:
   - component: {fileID: 998879086024779441}
   - component: {fileID: 7906041578439842870}
   - component: {fileID: 3125856697252154912}
+  - component: {fileID: 7215328455043994260}
   m_Layer: 10
   m_Name: Tank AI Root
   m_TagString: Untagged
@@ -470,6 +471,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Team
   teamId: 1
   TankObject: {fileID: 0}
+  TanksColliders: []
+  CollidersToExclude: []
 --- !u!114 &3125856697252154912
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -487,6 +490,18 @@ MonoBehaviour:
   - {fileID: 6833214485601657197}
   - {fileID: 4009920492917263450}
   - {fileID: 8084392105932145005}
+--- !u!114 &7215328455043994260
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1533165429205634993}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b9d193770673a64ba0fbd8ad60f6f0f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TankPresetApplier
 --- !u!1 &1650652248279660153
 GameObject:
   m_ObjectHideFlags: 0
