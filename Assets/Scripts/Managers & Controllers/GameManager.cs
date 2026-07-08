@@ -138,14 +138,23 @@ public class GameManager : MonoBehaviour
         {
             if (teamData.TeamId == teamId)
             {
+                int previousWholeScore = Mathf.FloorToInt(teamData.TeamScore);
+
                 teamData.TeamScore += amount;
+
+                int currentWholeScore = Mathf.FloorToInt(teamData.TeamScore);
 
                 if (teamData.TeamScore >= WinScore)
                 {
                     SetGameState(EGameState.GameOver);
                 }
 
-                OnScoreChanged?.Invoke();
+                if (previousWholeScore != currentWholeScore)
+                {
+                    OnScoreChanged?.Invoke();
+                }
+
+                break;
             }
         }
     }
