@@ -14,10 +14,10 @@ public class CaptureUI : MonoBehaviour
         if (Progress.value != CaptureZone.captureProgress)
             Progress.value = CaptureZone.captureProgress;
 
-        if (CaptureZone.teamOwner != previousTeamOwner)
+        if (CaptureZone.TeamOwner != previousTeamOwner)
         {
-            previousTeamOwner = CaptureZone.teamOwner;
-            var teamColour = GameManager.Instance.GetTeamColour(CaptureZone.teamOwner);
+            previousTeamOwner = CaptureZone.TeamOwner;
+            var teamColour = GameManager.Instance.GetTeamColour(CaptureZone.TeamOwner);
             Fill.color = teamColour;
         }
     }

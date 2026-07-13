@@ -53,7 +53,7 @@ public class TankController : MonoBehaviour
 
     void HandleShooting()
     {
-        if (Input.GetKeyDown(fireKey))
+        if (Input.GetKey(fireKey))
         {
             Cannon.Fire();
         }

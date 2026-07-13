@@ -1641,6 +1641,10 @@
       <Project>{A2C9617A-FDAF-12AB-D268-DDB8CC124CD0}</Project>
       <Name>sc.terrain.painter.editor</Name>
     </ProjectReference>
+    <ProjectReference Include="HUDIndicator.csproj">
+      <Project>{3E9ADE76-1E9D-DCB0-FBF8-99325F099F15}</Project>
+      <Name>HUDIndicator</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="GenerateTargetFrameworkMonikerAttribute" />

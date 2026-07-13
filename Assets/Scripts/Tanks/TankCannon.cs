@@ -10,6 +10,7 @@ public class TankCannon : MonoBehaviour
     public Transform firePoint;
     public GameObject shellPrefab;
     public Rigidbody TankRigidBody;
+    public Collider OwnerCollider;
 
     [Header("Aiming")]
     public float turretTurnSpeed = 50f;
@@ -74,7 +75,7 @@ public class TankCannon : MonoBehaviour
         if (bullet != null)
         {
             bullet.ownerTeam = myTeam.teamId;
-            bullet.SetOwner(gameObject);
+            bullet.SetOwner(OwnerCollider);
             bullet.SetDamage(damage);
         }
 

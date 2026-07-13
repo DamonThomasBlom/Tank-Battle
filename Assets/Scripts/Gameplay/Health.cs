@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Events;
@@ -15,16 +16,18 @@ public class Health : MonoBehaviour
     public bool debug;
 
     public UnityEvent OnDie = new UnityEvent();
-    public UnityEvent OnTakeDamage = new UnityEvent();
+    public UnityEvent OnHealthChange= new UnityEvent();
 
     private bool isDead = false;
     private NavMeshAgent agent;
     private Team team;
+    private TankStats tankStats;
 
     void Start()
     {
         agent = GetComponentInChildren<NavMeshAgent>();
         team = GetComponentInChildren<Team>();
+        tankStats = GetComponentInParent<TankStats>();
         currentHealth = maxHealth;
     }
 
@@ -34,7 +37,7 @@ public class Health : MonoBehaviour
         currentHealth = value;
     }
 
-    public void TakeDamage(float amount, int attackerTeam)
+    public void TakeDamage(float amount, int attackerTeam, TankStats ownerStats)
     {
         if (isDead) return;
 
@@ -49,11 +52,12 @@ public class Health : MonoBehaviour
         if (debug)
             Debug.Log("Take Damage: " + amount + ", Current Health: " + currentHealth);
 
-        OnTakeDamage.Invoke();
+        OnHealthChange.Invoke();
 
         if (currentHealth <= 0)
         {
             GameManager.Instance?.IncrementTeamKills(attackerTeam, 1);
+            ownerStats.AddKill();
             Die();
         }
     }
@@ -63,6 +67,8 @@ public class Health : MonoBehaviour
         //Debug.Log("Died: " + gameObject.name);
         OnDie.Invoke();
         isDead = true;
+
+        tankStats.AddDeath();
 
         StartCoroutine(RespawnRoutine());
     }
@@ -104,5 +110,6 @@ public class Health : MonoBehaviour
         currentHealth = maxHealth;
         isDead = false;
 
+        OnHealthChange.Invoke();
     }
 }

@@ -51,7 +51,7 @@ public class GameManager : MonoBehaviour
     public EGameState GameState = EGameState.WaitingForPlayers;
     public int WinScore = 500;
     public float GameStartCountDown = 10f;
-    public float GameTime;
+    public float GameTimeLeft;
     public float GameTimeLimit = 300f; // 5 minutes
     public int TeamIdWinner = -1;
 
@@ -65,6 +65,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        GameTimeLeft = GameTimeLimit;
         SetGameState(EGameState.WaitingForPlayers);
     }
 
@@ -79,9 +80,10 @@ public class GameManager : MonoBehaviour
                 break;
 
             case EGameState.InProgress:
-                GameTime += Time.deltaTime;
-                if (GameTime >= GameTimeLimit)
+                GameTimeLeft -= Time.deltaTime;
+                if (GameTimeLeft <= 0)
                 {
+                    GameTimeLeft = 0;
                     SetGameState(EGameState.GameOver);
                 }
                 break;
@@ -179,5 +181,10 @@ public class GameManager : MonoBehaviour
                 return team;
         }
         return null;
+    }
+
+    public List<TeamData> GetAllTeamsData()
+    {
+        return TeamsData;
     }
 }

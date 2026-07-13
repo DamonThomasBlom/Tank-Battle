@@ -1,11 +1,27 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Events;
+
+public enum CaptureZoneState
+{
+    Neutral,
+    Capturing,
+    Contested,
+    Losing,
+    Secured,
+    Enemy,
+    EnemyCapturing
+}
 
 public class CaptureZone : MonoBehaviour
 {
     [Header("Ownership")]
-    public int teamOwner = -1; // -1 = neutral
+    public string CaptureZoneId;
+    public int TeamOwner = -1; // -1 = neutral
+    public int CurrentBestTeam = -1; 
+    public CaptureZoneState ZoneState; // Purely local state used for UI and visual feedback
+    public UnityEvent<CaptureZoneState> OnZoneStateChanged;
 
     [Header("Capture")]
     public float captureProgress = 0f;
@@ -29,6 +45,11 @@ public class CaptureZone : MonoBehaviour
         zoneCollider = GetComponent<Collider>();
     }
 
+    private void Start()
+    {
+        SetZoneState(CaptureZoneState.Neutral);
+    }
+
     void Update()
     {
         UpdateCapture();
@@ -38,18 +59,30 @@ public class CaptureZone : MonoBehaviour
     void UpdateScore()
     {
         // Only give score if fully captured
-        if (teamOwner == -1) return;
+        if (TeamOwner == -1) return;
         if (captureProgress < maxCaptureProgress) return;
 
-        GameManager.Instance.IncrementTeamScore(teamOwner, scorePerSecond * Time.deltaTime);
+        GameManager.Instance.IncrementTeamScore(TeamOwner, scorePerSecond * Time.deltaTime);
     }
 
     void UpdateCapture()
     {
         if (tanksInZone.Count == 0)
-            return; // ❌ DO NOTHING → no more decay when empty
+        {
+            CurrentBestTeam = -1;
 
-        Dictionary<int, int> teamCounts = new Dictionary<int, int>();
+            // Update idle state for the UI
+            if (TeamOwner == -1)
+                SetZoneState(CaptureZoneState.Neutral);
+            else if (TeamOwner == Player.Instance.TeamID)
+                SetZoneState(CaptureZoneState.Secured);
+            else
+                SetZoneState(CaptureZoneState.Enemy);
+
+            return;
+        }
+
+        Dictionary<int, int> teamCounts = new();
 
         foreach (var t in tanksInZone)
         {
@@ -59,10 +92,8 @@ public class CaptureZone : MonoBehaviour
             teamCounts[t.teamId]++;
         }
 
-        // Find top 2 teams
         int bestTeam = -1;
         int bestCount = 0;
-
         int secondBestCount = 0;
 
         foreach (var kvp in teamCounts)
@@ -79,36 +110,66 @@ public class CaptureZone : MonoBehaviour
             }
         }
 
+        CurrentBestTeam = bestTeam;
+
         int netAdvantage = bestCount - secondBestCount;
 
-        // If equal → contested → no movement
         if (netAdvantage <= 0)
+        {
+            SetZoneState(CaptureZoneState.Contested);
             return;
+        }
 
         float delta = netAdvantage * captureSpeed * Time.deltaTime;
 
-        // 🔥 If zone owned by someone else → move toward neutral first
-        if (teamOwner != -1 && teamOwner != bestTeam)
+        // Enemy is removing ownership
+        if (TeamOwner != -1 && TeamOwner != bestTeam)
         {
             captureProgress -= delta;
+
+            if (TeamOwner == Player.Instance.TeamID)
+                SetZoneState(CaptureZoneState.Losing);
+            else if (bestTeam == Player.Instance.TeamID)
+                SetZoneState(CaptureZoneState.Capturing); // We are reclaiming an enemy zone
+            else 
+                SetZoneState(CaptureZoneState.EnemyCapturing);
 
             if (captureProgress <= 0f)
             {
                 captureProgress = 0f;
-                teamOwner = -1;
+                TeamOwner = -1;
             }
 
             return;
         }
 
-        // 🔥 Capturing or reinforcing
+        // Capturing/reinforcing
         captureProgress += delta;
+
+        if (bestTeam == Player.Instance.TeamID)
+            SetZoneState(CaptureZoneState.Capturing);
+        else 
+            SetZoneState(CaptureZoneState.EnemyCapturing);
 
         if (captureProgress >= maxCaptureProgress)
         {
             captureProgress = maxCaptureProgress;
-            teamOwner = bestTeam;
+            TeamOwner = bestTeam;
+            CurrentBestTeam = -1;
+
+            if (TeamOwner == Player.Instance.TeamID)
+                SetZoneState(CaptureZoneState.Secured);
+            else
+                SetZoneState(CaptureZoneState.Enemy);
         }
+    }
+
+    public void SetZoneState(CaptureZoneState state)
+    {
+        if (ZoneState == state)
+            return;
+        ZoneState = state;
+        OnZoneStateChanged.Invoke(state);
     }
 
     public void UpdateCaptureZoneData(GameManager.CaptureZoneConfigData config)

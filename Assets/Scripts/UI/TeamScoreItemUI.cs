@@ -9,7 +9,7 @@ public class TeamScoreItemUI : MonoBehaviour
     public ColourSetter ColourSetter;
     public Image TeamIconImage;
 
-    public void Setup(int score, int maxScore, Color teamColor)
+    public void Setup(float score, float maxScore, Color teamColor)
     {
         ScoreSlider.maxValue = maxScore;
         ScoreSlider.value = score;
@@ -25,9 +25,9 @@ public class TeamScoreItemUI : MonoBehaviour
         }
     }
 
-    public void UpdateScore(int score)
+    public void UpdateScore(float score)
     {
         ScoreSlider.value = score;
-        ScoreText.text = score.ToString();
+        ScoreText.text = score.ToString("F0");
     }
 }

@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using UnityEngine.UIElements;
 
 public class TankBullet : MonoBehaviour
 {
@@ -22,6 +21,7 @@ public class TankBullet : MonoBehaviour
     private Rigidbody rb;
     private Collider ownerCollider;
     bool hasExploded = false;
+    private TankStats OwnerStats;
 
     void Awake()
     {
@@ -112,13 +112,15 @@ public class TankBullet : MonoBehaviour
 
             float finalDamage = damage * damagePercent;
 
-            health.TakeDamage(finalDamage, ownerTeam);
+            health.TakeDamage(finalDamage, ownerTeam, OwnerStats);
+            OwnerStats.IncreaseDamage(finalDamage);
         }
     }
 
-    public void SetOwner(GameObject owner)
+    public void SetOwner(Collider owner)
     {
-        ownerCollider = owner.GetComponent<Collider>();
+        ownerCollider = owner;
+        OwnerStats = owner.GetComponentInParent<TankStats>();
     }
 
     public void SetDamage(float damageAmount)

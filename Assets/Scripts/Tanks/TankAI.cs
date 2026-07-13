@@ -90,7 +90,7 @@ public class TankAI : MonoBehaviour
 
     void Update()
     {
-        if (!GameManager.Instance.CanPlayerMove())
+        if (GameManager.Instance != null && !GameManager.Instance.CanPlayerMove())
         {
             if (currentState != TankState.Idle)
                 SetState(TankState.Idle);
@@ -188,7 +188,7 @@ public class TankAI : MonoBehaviour
 
         foreach (var zone in zones)
         {
-            if (zone.teamOwner == myTeam.teamId)
+            if (zone.TeamOwner == myTeam.teamId)
                 continue; // Skip already owned zones
 
             float dist = Vector3.Distance(transform.position, zone.centerPoint.position);
@@ -199,7 +199,7 @@ public class TankAI : MonoBehaviour
             score -= dist;
 
             // Prefer enemy zones
-            if (zone.teamOwner != myTeam.teamId)
+            if (zone.TeamOwner != myTeam.teamId)
                 score += 50f;
 
             // Avoid overcrowded zones
@@ -323,7 +323,7 @@ public class TankAI : MonoBehaviour
             return;
         }
 
-        if (targetZone.teamOwner == myTeam.teamId)
+        if (targetZone.TeamOwner == myTeam.teamId)
         {
             SetState(TankState.Idle);
             return;
@@ -374,7 +374,7 @@ public class TankAI : MonoBehaviour
         }
 
         // If captured → leave
-        if (targetZone.teamOwner == myTeam.teamId)
+        if (targetZone.TeamOwner == myTeam.teamId)
         {
             SetState(TankState.Idle);
         }

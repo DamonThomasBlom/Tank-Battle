@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 5885979754168192589}
   - component: {fileID: 149374531476391772}
   - component: {fileID: 3202685800666706374}
+  - component: {fileID: 4062917854865931437}
   m_Layer: 3
   m_Name: TankBullet
   m_TagString: Untagged
@@ -54,9 +55,9 @@ SphereCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
-  m_Radius: 0.15
+  m_Radius: 0.2
   m_Center: {x: 0, y: 0, z: 0.15}
 --- !u!54 &5885979754168192589
 Rigidbody:
@@ -120,6 +121,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ProjectileGravity
   gravityScale: 1
   gravity: {x: 0, y: 0, z: 0}
+--- !u!65 &4062917854865931437
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6373038903004428075}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.39747268, y: 0.40153217, z: 0.64325464}
+  m_Center: {x: 0, y: 0, z: 0.032475933}
 --- !u!1 &7395796657332553695
 GameObject:
   m_ObjectHideFlags: 0
@@ -201,7 +223,7 @@ TrailRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Time: 3
+  m_Time: 2
   m_PreviewTimeScale: 1
   m_Parameters:
     serializedVersion: 3
@@ -241,15 +263,15 @@ TrailRenderer:
       key6: {r: 0, g: 0, b: 0, a: 0}
       key7: {r: 0, g: 0, b: 0, a: 0}
       ctime0: 0
-      ctime1: 6746
-      ctime2: 16384
-      ctime3: 65535
+      ctime1: 3084
+      ctime2: 6361
+      ctime3: 20817
       ctime4: 0
       ctime5: 0
       ctime6: 0
       ctime7: 0
       atime0: 0
-      atime1: 55898
+      atime1: 59560
       atime2: 65535
       atime3: 0
       atime4: 0
