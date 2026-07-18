@@ -118,8 +118,27 @@ public class TankCameraController : MonoBehaviour
             desiredPos = hit.point + hit.normal * camCollisionRadius;
         }
 
-        cam.transform.position = Vector3.Lerp(cam.transform.position, desiredPos, Time.deltaTime * camFollowLerp);
-        cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, rot, Time.deltaTime * camFollowLerp);
+        Vector3 finalPos = desiredPos;
+        Quaternion finalRot = rot;
+
+        if (CameraShake.Instance != null)
+        {
+            finalPos += rot * CameraShake.Instance.PositionOffset;
+            finalRot *= CameraShake.Instance.RotationOffset;
+        }
+
+        cam.transform.position = Vector3.Lerp(
+            cam.transform.position,
+            finalPos,
+            Time.deltaTime * camFollowLerp);
+
+        cam.transform.rotation = Quaternion.Slerp(
+            cam.transform.rotation,
+            finalRot,
+            Time.deltaTime * camFollowLerp);
+
+        //cam.transform.position = Vector3.Lerp(cam.transform.position, desiredPos, Time.deltaTime * camFollowLerp);
+        //cam.transform.rotation = Quaternion.Slerp(cam.transform.rotation, rot, Time.deltaTime * camFollowLerp);
     }
 
     void UpdatePivotHeight()

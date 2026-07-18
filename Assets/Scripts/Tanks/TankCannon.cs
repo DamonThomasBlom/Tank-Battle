@@ -3,6 +3,7 @@ using UnityEngine;
 public class TankCannon : MonoBehaviour
 {
     public Transform DebugTarget;
+    public bool IsLocalPlayer;
 
     [Header("References")]
     [SerializeField] private Transform turret;
@@ -11,6 +12,8 @@ public class TankCannon : MonoBehaviour
     public GameObject shellPrefab;
     public Rigidbody TankRigidBody;
     public Collider OwnerCollider;
+    public Animator FireAnimator;
+    public ParticleSystem MuzzleFlashParticle;
 
     [Header("Aiming")]
     public float turretTurnSpeed = 50f;
@@ -69,6 +72,9 @@ public class TankCannon : MonoBehaviour
 
         if (shellPrefab == null || firePoint == null) return;
 
+        ShakeCameraLocalPlayer();
+        FireAnimator.SetTrigger("Fire");
+        MuzzleFlashParticle.Play();
         GameObject shell = PoolManager.Instance.Spawn(shellPrefab, firePoint.position, firePoint.rotation);
 
         var bullet = shell.GetComponent<TankBullet>();
@@ -118,5 +124,12 @@ public class TankCannon : MonoBehaviour
 
         // Match turret's Y
         turret.localEulerAngles = new Vector3(0, barrel.localEulerAngles.y, 0);
+    }
+
+    void ShakeCameraLocalPlayer()
+    {
+        if (!IsLocalPlayer) return;
+
+        CameraShake.Instance.Shake(.25f);
     }
 }

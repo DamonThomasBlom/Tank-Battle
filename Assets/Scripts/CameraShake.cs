@@ -2,31 +2,56 @@ using UnityEngine;
 
 public class CameraShake : MonoBehaviour
 {
-    public static CameraShake instance;
+    public static CameraShake Instance;
 
-    Vector3 originalPos;
+    [Header("Settings")]
+    public float maxPositionShake = 0.35f;
+    public float maxRotationShake = 4f;
+    public float traumaDecay = 1.5f;
+    public float noiseFrequency = 25f;
+
+    float trauma;
+
+    float seedX;
+    float seedY;
+    float seedRot;
+
+    public Vector3 PositionOffset { get; private set; }
+    public Quaternion RotationOffset { get; private set; }
 
     void Awake()
     {
-        instance = this;
+        Instance = this;
+
+        seedX = Random.value * 100f;
+        seedY = Random.value * 100f;
+        seedRot = Random.value * 100f;
     }
 
-    public void Shake(float intensity, float duration)
+    public void Shake(float amount)
     {
-        originalPos = transform.localPosition;
+        trauma = Mathf.Clamp01(trauma + amount);
+    }
 
-        // Cancel any ongoing tweens
-        LeanTween.cancel(gameObject);
+    void LateUpdate()
+    {
+        trauma = Mathf.MoveTowards(trauma, 0f, traumaDecay * Time.deltaTime);
 
-        // Small punch in random direction
-        Vector3 punch = new Vector3(
-            Random.Range(-1f, 1f) * intensity,
-            Random.Range(-1f, 1f) * intensity,
+        float shake = trauma * trauma;
+
+        float time = Time.time * noiseFrequency;
+
+        PositionOffset = maxPositionShake * shake * new Vector3(
+            (Mathf.PerlinNoise(seedX, time) - 0.5f) * 2f,
+            (Mathf.PerlinNoise(seedY, time) - 0.5f) * 2f,
             0f
         );
 
-        // PunchPosition auto eases back to original
-        LeanTween.moveLocal(gameObject, originalPos + punch, duration)
-            .setEasePunch();
+        float rot =
+            (Mathf.PerlinNoise(seedRot, time) - 0.5f) * 2f *
+            maxRotationShake *
+            shake;
+
+        RotationOffset = Quaternion.Euler(0f, 0f, rot);
     }
 }

@@ -99,14 +99,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   ParticleEffect: {fileID: 1685874166552172, guid: 2dc5347a44240ea4597cafb2d1d7c160, type: 3}
+  TrailParticleEffect: {fileID: 5492547105886606699, guid: 886fd81f6360c574bb311be6b4fdc0ba, type: 3}
   bulletGraphic: {fileID: 6309983356251170485}
   damage: 30
   ownerTeam: 0
   destroyDelay: 0.05
   explosionCameraShakeRadius: 10
-  maxShakeIntensity: 0.8
+  maxShakeIntensity: 1
   bulletLifetime: 15
   Trail: {fileID: 1376188933764592584}
+  damageMultiplier: 3
 --- !u!114 &3202685800666706374
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -158,7 +160,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2469139469373702355
 Transform:
   m_ObjectHideFlags: 0

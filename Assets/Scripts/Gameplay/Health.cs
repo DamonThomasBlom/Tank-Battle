@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Events;
@@ -16,6 +15,7 @@ public class Health : MonoBehaviour
     public bool debug;
 
     public UnityEvent OnDie = new UnityEvent();
+    public UnityEvent OnRespawn = new UnityEvent();
     public UnityEvent OnHealthChange= new UnityEvent();
 
     private bool isDead = false;
@@ -110,6 +110,7 @@ public class Health : MonoBehaviour
         currentHealth = maxHealth;
         isDead = false;
 
+        OnRespawn.Invoke();
         OnHealthChange.Invoke();
     }
 }

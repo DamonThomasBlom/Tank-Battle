@@ -4,6 +4,7 @@ public class TankBullet : MonoBehaviour
 {
     [Header("Explosion")]
     public GameObject ParticleEffect;   // Prefab with particles + optional shockwave
+    public GameObject TrailParticleEffect;   // Prefab with particles
     public Transform bulletGraphic;  // assign your bullet mesh here in Inspector
 
     [Header("Damage")]
@@ -18,10 +19,13 @@ public class TankBullet : MonoBehaviour
 
     public TrailRenderer Trail;
 
+    public float damageMultiplier = 1f;
+
     private Rigidbody rb;
     private Collider ownerCollider;
     bool hasExploded = false;
     private TankStats OwnerStats;
+    private GameObject _currentTrail;
 
     void Awake()
     {
@@ -39,6 +43,8 @@ public class TankBullet : MonoBehaviour
 
         PoolManager.Instance.DespawnAfterDelay(gameObject, bulletLifetime);
         Trail.Clear();
+
+        SpawnTrail();
     }
 
     void Update()
@@ -50,7 +56,6 @@ public class TankBullet : MonoBehaviour
         }
     }
 
-
     private void OnTriggerEnter(Collider other)
     {
         if (hasExploded) return;
@@ -58,6 +63,7 @@ public class TankBullet : MonoBehaviour
 
         hasExploded = true;
         Explode();
+        DespawnTrail();
 
         // Spawn particle effect
         if (ParticleEffect != null)
@@ -75,13 +81,13 @@ public class TankBullet : MonoBehaviour
         }
 
         // Camera shake
-        if (CameraShake.instance != null)
+        if (CameraShake.Instance != null)
         {
-            float dist = Vector3.Distance(transform.position, CameraShake.instance.transform.position);
+            float dist = Vector3.Distance(transform.position, CameraShake.Instance.transform.position);
             if (dist < explosionCameraShakeRadius)
             {
                 float intensity = Mathf.Lerp(maxShakeIntensity, 0f, dist / explosionCameraShakeRadius);
-                CameraShake.instance.Shake(intensity, 0.3f);
+                CameraShake.Instance.Shake(intensity);
             }
         }
 
@@ -110,7 +116,7 @@ public class TankBullet : MonoBehaviour
             float damagePercent = 1f - (distance / radius);
             damagePercent = Mathf.Clamp01(damagePercent);
 
-            float finalDamage = damage * damagePercent;
+            float finalDamage = damage * damagePercent * damageMultiplier;
 
             health.TakeDamage(finalDamage, ownerTeam, OwnerStats);
             OwnerStats.IncreaseDamage(finalDamage);
@@ -126,5 +132,26 @@ public class TankBullet : MonoBehaviour
     public void SetDamage(float damageAmount)
     {
         damage = damageAmount;
+    }
+
+    private void SpawnTrail()
+    {
+        if (TrailParticleEffect == null) return;
+
+        _currentTrail = PoolManager.Instance.Spawn(TrailParticleEffect, transform.position, Quaternion.identity);
+        _currentTrail.transform.parent = transform;
+
+        ParticleSystem ps = _currentTrail.GetComponentInChildren<ParticleSystem>();
+        ps.Play();
+    }
+
+    private void DespawnTrail()
+    {
+        if (TrailParticleEffect == null) return;
+
+        _currentTrail.transform.parent = null;
+        ParticleSystem ps = _currentTrail.GetComponentInChildren<ParticleSystem>();
+        ps.Stop();
+        PoolManager.Instance.DespawnAfterDelay(_currentTrail, ps.main.duration + 0.5f);
     }
 }

@@ -6,16 +6,21 @@ public class ZoneStatusUIItem : MonoBehaviour
 {
     public QuickZoneItemUI ZoneUI;
     public QuickZoneItemUI QuickZoneUI;
+    public QuickZoneItemUI WaypointUI;
     public Slider CaptureProgressSlider;
     public Image SliderImage;
     public TextMeshProUGUI ZoneStatus;
 
-    public void Setup(string zoneId, float maxCaptureValue)
+    public void Setup(string zoneId, float maxCaptureValue, Transform captureZoneTransform)
     {
         ZoneUI.Setup(zoneId);
         QuickZoneUI.Setup(zoneId);
+        WaypointUI.Setup(zoneId);
         CaptureProgressSlider.maxValue = maxCaptureValue;
         CaptureProgressSlider.value = 0f;
+
+        var waypoint = WaypointUI.transform.parent.GetComponent<WaypointUI>();
+        waypoint.Target = captureZoneTransform;
     }
 
     public void SetCaptureProgress(float progress)
@@ -34,49 +39,50 @@ public class ZoneStatusUIItem : MonoBehaviour
 
         ZoneUI.UpdateCaptureColour(ownerColour);
         QuickZoneUI.UpdateCaptureColour(ownerColour);
+        WaypointUI.UpdateCaptureColour(ownerColour);
 
         switch (state)
         {
             case CaptureZoneState.Neutral:
                 ZoneStatus.text = "NEUTRAL";
                 SliderImage.color = Color.white;
-                QuickZoneUI.SetShadowBackToDefault();
+                SetQuickZoneShadowsToDefault();
                 break;
 
             case CaptureZoneState.Capturing:
                 ZoneStatus.text = "CAPTURING";
                 SliderImage.color = capturingColour;
-                QuickZoneUI.SetShadowColour(capturingColour);
+                UpdateQuickZoneShadows(capturingColour);
                 break;
 
             case CaptureZoneState.EnemyCapturing:
                 ZoneStatus.text = "ENEMY CAPTURING";
                 SliderImage.color = capturingColour;
-                QuickZoneUI.SetShadowColour(capturingColour);
+                UpdateQuickZoneShadows(capturingColour);
                 break;
 
             case CaptureZoneState.Contested:
                 ZoneStatus.text = "CONTESTED";
                 SliderImage.color = Color.white;
-                QuickZoneUI.SetShadowBackToDefault();
+                SetQuickZoneShadowsToDefault();
                 break;
 
             case CaptureZoneState.Losing:
                 ZoneStatus.text = "UNDER ATTACK";
                 SliderImage.color = capturingColour;
-                QuickZoneUI.SetShadowColour(capturingColour);
+                UpdateQuickZoneShadows(capturingColour);
                 break;
 
             case CaptureZoneState.Secured:
                 ZoneStatus.text = "SECURED";
                 SliderImage.color = ownerColour;
-                QuickZoneUI.SetShadowBackToDefault();
+                SetQuickZoneShadowsToDefault();
                 break;
 
             case CaptureZoneState.Enemy:
                 ZoneStatus.text = "ENEMY";
                 SliderImage.color = ownerColour;
-                QuickZoneUI.SetShadowBackToDefault();
+                SetQuickZoneShadowsToDefault();
                 break;
         }
     }
@@ -84,6 +90,19 @@ public class ZoneStatusUIItem : MonoBehaviour
     public void TurnOff()
     {
         QuickZoneUI.gameObject.SetActive(false);
+        WaypointUI.transform.parent.gameObject.SetActive(false);
         gameObject.SetActive(false);
+    }
+
+    void UpdateQuickZoneShadows(Color colour)
+    {
+        QuickZoneUI.SetShadowColour(colour);
+        WaypointUI.SetShadowColour(colour);
+    }
+
+    void SetQuickZoneShadowsToDefault()
+    {
+        QuickZoneUI.SetShadowBackToDefault();
+        WaypointUI.SetShadowBackToDefault();
     }
 }

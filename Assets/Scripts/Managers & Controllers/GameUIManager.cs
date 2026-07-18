@@ -123,7 +123,7 @@ public class GameUIManager : MonoBehaviour
                 continue;
             }
             zoneUIToCaptureZoneMap.Add(ZoneUIs[i], allCaptureZones[i]);
-            ZoneUIs[i].Setup(allCaptureZones[i].CaptureZoneId, allCaptureZones[i].maxCaptureProgress);
+            ZoneUIs[i].Setup(allCaptureZones[i].CaptureZoneId, allCaptureZones[i].maxCaptureProgress, allCaptureZones[i].transform);
         }
     }
 
